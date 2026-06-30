@@ -1,0 +1,14 @@
+
+__pycache__/
+*.py[cod]
+
+venv/
+
+node_modules/
+
+vscode/
+
+.env
+
+README.md
+
