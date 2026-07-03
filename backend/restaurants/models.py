@@ -14,8 +14,15 @@ class Restaurant(Base):
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
-    offers = relationship(
+    # offers = relationship(
+    #     "Offer",
+    #     back_populates="restaurant",
+    #     passive_deletes=True,
+    # )
+
+    offers: Mapped[list["Offer"]] = relationship(
         "Offer",
         back_populates="restaurant",
         cascade="all, delete-orphan",
+        passive_deletes=True,
     )

@@ -11,7 +11,13 @@ class Category(Base):
     name: Mapped[str] = mapped_column(String(80), nullable=False)
     slug: Mapped[str] = mapped_column(String(80), unique=True, index=True, nullable=False)
 
-    offers = relationship (
+    # offers = relationship (
+    #     "Offer",
+    #     back_populates="category",
+    # )
+
+    offers: Mapped[list["Offer"]] = relationship(
         "Offer",
         back_populates="category",
+        passive_deletes=True,
     )

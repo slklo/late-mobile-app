@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from decimal import Decimal
 
 from backend.core.database import Base
@@ -11,6 +11,7 @@ from sqlalchemy import (
     String,
     Text,
     Integer,
+    CheckConstraint
 )
 
 from sqlalchemy.orm import (
@@ -22,7 +23,15 @@ from sqlalchemy.orm import (
 class Offer(Base):
     __tablename__ = "offers"
 
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    __table_args__ = (
+        CheckConstraint("quantity_available >= 0", name="ck_offer_quantity_available_non_negative"),
+        CheckConstraint("original_price >= 0", name="ck_offer_original_price_non_negative"),
+        CheckConstraint("discounted_price >= 0", name="ck_offer_discounted_price_non_negative"),
+        CheckConstraint("discounted_price <= original_price", name="ck_offer_discounted_price_lte_original_price"),
+        CheckConstraint("pickup_end > pickup_start", name="ck_offer_pickup_end_after_start"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
     
     restaurant_id: Mapped[int] = mapped_column(
         ForeignKey("restaurants.id", ondelete="CASCADE"),
