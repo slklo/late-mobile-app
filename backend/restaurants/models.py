@@ -1,7 +1,7 @@
 from sqlalchemy import Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from backend.core.database import Base
+from core.database import Base
 
 class Restaurant(Base):
     __tablename__ = "restaurants"
