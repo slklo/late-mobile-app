@@ -53,12 +53,12 @@ class Offer(Base):
     original_price: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     discounted_price: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
 
-    quantity_available: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    quantity_available: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default=text("0"))
     
     pickup_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     pickup_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
 
     restaurant = relationship(
         "Restaurant",

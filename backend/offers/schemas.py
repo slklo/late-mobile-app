@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict
 from categories.schemas import CategoryPreview
 from restaurants.schemas import RestaurantPreview
 
-class OfferListItem(BaseModel):
+class OfferRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int

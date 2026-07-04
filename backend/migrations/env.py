@@ -1,4 +1,6 @@
 from logging.config import fileConfig
+from importlib import import_module
+from pathlib import Path
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
@@ -6,10 +8,14 @@ from sqlalchemy import engine_from_config, pool
 from core.config import settings
 from core.database import Base
 
-from restaurants import models as restaurant_models # noqa: F401
-from categories import models as category_models # noqa: F401
-from offers import models as offer_models # noqa: F401
 
+def import_model_modules() -> None:
+    """Import every backend models.py module so Base.metadata is populated."""
+    backend_root = Path(__file__).resolve().parents[1]
+    for model_path in backend_root.rglob("models.py"):
+        module_path = model_path.relative_to(backend_root).with_suffix("")
+        module_name = ".".join(module_path.parts)
+        import_module(module_name)
 
 
 # this is the Alembic Config object, which provides
@@ -26,6 +32,7 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
+import_model_modules()
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
@@ -50,6 +57,8 @@ def run_migrations_offline() -> None:
     context.configure(
         url=url,
         target_metadata=target_metadata,
+        compare_type=True,
+        compare_server_default=True,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
@@ -73,7 +82,10 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
+            compare_type=True,
+            compare_server_default=True,
         )
 
         with context.begin_transaction():
