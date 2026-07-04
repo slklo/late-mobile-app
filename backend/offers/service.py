@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 
 from offers.models import Offer
 from offers.repository import OfferRepository
+from offers.exceptions import OfferNotFoundError
 
 class OfferNotFoundError(Exception):
     pass
@@ -17,6 +18,6 @@ class OfferService:
         offer = self.repository.get_offer_by_id(offer_id)
 
         if offer is None:
-            raise OfferNotFoundError(f"Offer with id={offer_id} not found")
+            raise OfferNotFoundError(offer_id)
         
         return offer
