@@ -1,10 +1,13 @@
 
 __pycache__/
+.pytest_cache/
 *.py[cod]
 
 venv/
 
 node_modules/
+
+.agents/
 
 vscode/
 
@@ -45,3 +48,4 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
