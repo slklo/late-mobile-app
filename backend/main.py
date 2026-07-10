@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from categories import models as category_models  # noqa: F401
 from core.config import settings
-from offers import models as offer_models  # noqa: F401
-from restaurants import models as restaurant_models  # noqa: F401
-from api.router import api_router
+from core.model_registry import import_models
+
+import_models()
+
+from api.router import api_router  # noqa: E402
 
 app = FastAPI(
     title=settings.app_name
