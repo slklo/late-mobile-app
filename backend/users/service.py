@@ -1,3 +1,4 @@
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from users.models import User
@@ -32,7 +33,12 @@ class UserService:
         )
 
         self.repository.add(user)
-        self.db.commit()
+        try:
+            self.db.commit()
+        except IntegrityError as exc:
+            self.db.rollback()
+            raise EmailAlreadyRegisteredError() from exc
+
         self.db.refresh(user)
 
         return user
