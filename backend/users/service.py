@@ -5,13 +5,7 @@ from users.models import User
 from users.repository import UserRepository
 from users.schemas import UserLoginRequest, UserRegisterRequest
 from users.security import hash_password, verify_password
-
-class EmailAlreadyRegisteredError(Exception):
-    pass
-
-
-class InvalidCredentialsError(Exception):
-    pass
+from users.exceptions import EmailAlreadyRegisteredError, InvalidCredentialsError
 
 class UserService:
     def __init__(self, db: Session):

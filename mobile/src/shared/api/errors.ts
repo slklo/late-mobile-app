@@ -2,6 +2,10 @@ import axios from "axios";
 
 type ApiErrorBody = {
     detail?: string | Array<{msg?:string}>;
+    error?: {
+        code?: string;
+        message?: string;
+    };
 }
 
 export function getApiErrorMessage(
@@ -13,6 +17,11 @@ export function getApiErrorMessage(
     }
 
     const detail = error.response?.data?.detail;
+    const errorMessage = error.response?.data?.error?.message;
+
+    if (typeof errorMessage === "string") {
+        return errorMessage;
+    }
 
     if (typeof detail === "string") {
         return detail;

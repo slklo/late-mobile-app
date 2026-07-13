@@ -4,9 +4,6 @@ from offers.models import Offer
 from offers.repository import OfferRepository
 from offers.exceptions import OfferNotFoundError
 
-class OfferNotFoundError(Exception):
-    pass
-
 class OfferService:
     def __init__(self, db: Session):
         self.repository = OfferRepository(db)
