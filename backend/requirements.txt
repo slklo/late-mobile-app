@@ -2,6 +2,7 @@ fastapi
 uvicorn[standard]
 sqlalchemy
 psycopg[binary]
+redis==7.4.1
 alembic
 pytest
 httpx
