@@ -5,6 +5,8 @@ __pycache__/
 
 venv/
 
+reference/
+
 node_modules/
 
 .agents/
