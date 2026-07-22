@@ -3,16 +3,15 @@ from sqlalchemy.orm import Session
 
 from users.models import User
 from users.repository import UserRepository
-from users.schemas import UserLoginRequest, UserRegisterRequest
-from users.security import hash_password, verify_password
-from users.exceptions import EmailAlreadyRegisteredError, InvalidCredentialsError
+from users.schemas import UserCreate, UserProfileUpdate
+from users.exceptions import EmailAlreadyRegisteredError, UserNotFoundError
 
 class UserService:
     def __init__(self, db: Session):
         self.db = db
         self.repository = UserRepository(db)
 
-    def register_user(self, data: UserRegisterRequest) -> User:
+    def create_user(self, data: UserCreate) -> User:
         email = data.email.lower().strip()
 
         existing_user = self.repository.get_by_email(email)
@@ -22,7 +21,6 @@ class UserService:
 
         user = User(
             email=email,
-            password_hash=hash_password(data.password),
             full_name=data.full_name,
         )
 
@@ -36,21 +34,20 @@ class UserService:
         self.db.refresh(user)
 
         return user
-    
-    def authenticate_user(self, data: UserLoginRequest) -> User:
-        email = data.email.lower().strip()
 
-        user = self.repository.get_by_email(email)
+    def get_user_by_id(self, user_id: int) -> User:
+        user = self.repository.get_by_id(user_id)
 
         if user is None:
-            raise InvalidCredentialsError()
-        
-        if not verify_password(data.password, user.password_hash):
-            raise InvalidCredentialsError()
-        
-        if not user.is_active:
-            raise InvalidCredentialsError()
-        
+            raise UserNotFoundError()
+
         return user
-    
-    
+
+    def update_profile(self, user_id: int, data: UserProfileUpdate) -> User:
+        user = self.get_user_by_id(user_id)
+
+        user.full_name = data.full_name
+        self.db.commit()
+        self.db.refresh(user)
+
+        return user

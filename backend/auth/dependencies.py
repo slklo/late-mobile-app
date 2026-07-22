@@ -7,10 +7,10 @@ from auth.exceptions import (
     AuthenticationServiceUnavailableError,
     AuthenticationTokenError,
 )
+from auth.token_service import decode_access_token
 from core.database import get_db
-from users.models import User
 from users.repository import UserRepository
-from users.security import decode_access_token
+from users.schemas import UserRead
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -31,7 +31,7 @@ def get_redis(request: Request) -> Redis:
 def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: Session = Depends(get_db),
-) -> User:
+) -> UserRead:
     if credentials is None:
         raise AuthenticationTokenError()
 
@@ -45,4 +45,4 @@ def get_current_user(
     if user is None or not user.is_active:
         raise AuthenticationTokenError()
 
-    return user
+    return UserRead.model_validate(user)

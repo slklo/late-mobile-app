@@ -58,11 +58,10 @@ def register_exception_handlers(app: FastAPI) -> None:
     from offers.exceptions import OfferNotFoundError
     from auth.exceptions import (
         AuthenticationServiceUnavailableError,
-        AuthenticationTokenError
+        AuthenticationTokenError,
     )
     from users.exceptions import (
         EmailAlreadyRegisteredError,
-        InvalidCredentialsError,
         UserNotFoundError,
     )
 
@@ -83,10 +82,7 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     _register_many(
         app,
-        (
-            AuthenticationTokenError,
-            InvalidCredentialsError,
-        ),
+        (AuthenticationTokenError,),
         status.HTTP_401_UNAUTHORIZED,
     )
 
