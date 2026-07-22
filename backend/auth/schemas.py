@@ -16,14 +16,14 @@ class AuthRequrest(BaseModel):
 class EmailAuthRequest(AuthRequrest):
     email: EmailStr
 
-class EmailChallangeResponse(BaseModel):
-    challange_id: UUID
+class EmailchallengeResponse(BaseModel):
+    challenge_id: UUID
     message: str
     expires_in_seconds: int = Field(gt=0)
     resend_after_seconds: int = Field(ge=0)
 
 class VerifyCodeRequest(AuthRequrest):
-    challange_id: UUID
+    challenge_id: UUID
     code: str = Field(
         min_length=6,
         max_length=6,
@@ -31,7 +31,7 @@ class VerifyCodeRequest(AuthRequrest):
     )
 
 class ConsumeLinkRequest(AuthRequrest):
-    challange_id: UUID
+    challenge_id: UUID
     token: str = Field(
         min_length=32,
         max_length=256,
@@ -43,4 +43,3 @@ class AuthSessionResponse(BaseModel):
     token_type: Literal["bearer"] = "bearer"
     user: UserRead
     next_step: AuthNextStep
-    
