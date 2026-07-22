@@ -56,8 +56,11 @@ def _register_many(
 
 def register_exception_handlers(app: FastAPI) -> None:
     from offers.exceptions import OfferNotFoundError
+    from auth.exceptions import (
+        AuthenticationServiceUnavailableError,
+        AuthenticationTokenError
+    )
     from users.exceptions import (
-        AuthenticationTokenError,
         EmailAlreadyRegisteredError,
         InvalidCredentialsError,
         UserNotFoundError,
@@ -85,6 +88,14 @@ def register_exception_handlers(app: FastAPI) -> None:
             InvalidCredentialsError,
         ),
         status.HTTP_401_UNAUTHORIZED,
+    )
+
+    _register_many(
+        app,
+        (
+            AuthenticationServiceUnavailableError,
+        ),
+        status.HTTP_503_SERVICE_UNAVAILABLE
     )
 
     @app.exception_handler(Exception)

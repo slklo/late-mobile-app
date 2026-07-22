@@ -16,7 +16,19 @@ services:
   redis: 
     image: redis:7.4-alpine
     restart: unless-stopped
-    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    command: [
+      "redis-server", 
+      "--save",
+      "", 
+      "--appendonly", 
+      "no",
+      "--maxmemory",
+      "256mb",
+      "--maxmemory-policy",
+      "noeviction"
+    ]
+    ports:
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s

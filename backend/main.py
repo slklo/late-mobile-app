@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from core.config import settings
+from core.lifespan import lifespan
 from core.exception_handlers import register_exception_handlers
 from core.model_registry import import_models
 
@@ -10,7 +11,8 @@ import_models()
 from api.router import api_router  # noqa: E402
 
 app = FastAPI(
-    title=settings.app_name
+    title=settings.app_name,
+    lifespan=lifespan
 )
 
 register_exception_handlers(app)

@@ -1,16 +1,16 @@
 from fastapi import APIRouter, Depends, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from core.database import get_db
-from users.exceptions import AuthenticationTokenError
-from users.repository import UserRepository
+from users.models import User
 from users.schemas import AuthTokenResponse, UserLoginRequest, UserRead, UserRegisterRequest
-from users.security import create_access_token, decode_access_token
+from users.security import create_access_token
 from users.service import UserService
 
+from auth.dependencies import get_current_user
+
+
 router = APIRouter()
-bearer_scheme = HTTPBearer(auto_error=False)
 
 @router.post(
     "/register",
@@ -53,21 +53,6 @@ def login_user(
 
 @router.get("/me", response_model=UserRead)
 def get_current_user_profile(
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    if credentials is None:
-        raise AuthenticationTokenError()
-
-    token = credentials.credentials
-    user_id = decode_access_token(token)
-
-    if user_id is None:
-        raise AuthenticationTokenError()
-    
-    user = UserRepository(db).get_by_id(user_id)
-
-    if user is None or not user.is_active:
-        raise AuthenticationTokenError("User not found or inactive")
-    
-    return user
+    return current_user

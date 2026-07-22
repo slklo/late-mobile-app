@@ -11,10 +11,6 @@ class InvalidCredentialsError(AppError):
     message = "Invalid email or password"
 
 
-class AuthenticationTokenError(AppError):
-    code = "AUTHENTICATION_TOKEN_ERROR"
-    message = "Invalid or expired token"
-
 
 class UserNotFoundError(AppError):
     code = "USER_NOT_FOUND"
