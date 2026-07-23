@@ -6,6 +6,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { useState, useEffect } from "react";
 
 import { useAuthBootstrap } from "@/features/auth/hooks/useAuthBootstrap";
+import { getAuthAccess } from "@/features/auth/routing/authAccess";
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { setUnauthorizedHandler } from "@/shared/api/client";
 
@@ -20,7 +21,7 @@ export default function RootLayout() {
     );
 
     const clearUser = useAuthStore((state) => state.clearUser);
-    const isProfileComplete = Boolean(user?.profile_completed_at);
+    const authAccess = getAuthAccess(user);
 
     useAuthBootstrap();
 
@@ -41,18 +42,18 @@ export default function RootLayout() {
     return (
         <QueryClientProvider client={queryClient}>
           <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Protected guard={!user}>
+            <Stack.Protected guard={authAccess.isUnauthenticated}>
               <Stack.Screen name="(auth)" />
             </Stack.Protected>
         
             <Stack.Protected
-              guard={Boolean(user) && !isProfileComplete}
+              guard={authAccess.needsProfile}
             >
               <Stack.Screen name="(onboarding)" />
             </Stack.Protected>
 
             <Stack.Protected
-              guard={Boolean(user) && isProfileComplete}
+              guard={authAccess.canExplore}
             >
               <Stack.Screen name="(app)" />
             </Stack.Protected>
