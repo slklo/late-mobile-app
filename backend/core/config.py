@@ -1,3 +1,4 @@
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -8,6 +9,11 @@ class Settings(BaseSettings):
     jwt_secret: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
+
+    auth_challenge_secret: SecretStr = Field(min_length=32)
+    auth_challenge_ttl_seconds: int = Field(default=600, gt=0)
+    auth_resend_cooldown_seconds: int = Field(default=60, ge=0)
+    auth_magic_link_token_bytes: int = Field(default=32, ge=32)
 
     model_config = SettingsConfigDict(
         env_file=".env",

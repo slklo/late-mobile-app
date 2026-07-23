@@ -10,19 +10,19 @@ class AuthNextStep(str, Enum):
     COMPLETE_PROFILE = "complete_profile"
     EXPLORE = "explore"
 
-class AuthRequrest(BaseModel):
+class AuthRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-class EmailAuthRequest(AuthRequrest):
+class EmailAuthRequest(AuthRequest):
     email: EmailStr
 
-class EmailchallengeResponse(BaseModel):
+class EmailChallengeResponse(BaseModel):
     challenge_id: UUID
     message: str
     expires_in_seconds: int = Field(gt=0)
     resend_after_seconds: int = Field(ge=0)
 
-class VerifyCodeRequest(AuthRequrest):
+class VerifyCodeRequest(AuthRequest):
     challenge_id: UUID
     code: str = Field(
         min_length=6,
@@ -30,7 +30,7 @@ class VerifyCodeRequest(AuthRequrest):
         pattern=r"^\d{6}$",
     )
 
-class ConsumeLinkRequest(AuthRequrest):
+class ConsumeLinkRequest(AuthRequest):
     challenge_id: UUID
     token: str = Field(
         min_length=32,
