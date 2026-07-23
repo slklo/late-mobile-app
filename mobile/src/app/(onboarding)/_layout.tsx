@@ -1,14 +1,17 @@
 import { Stack } from "expo-router";
 
+export const unstable_settings = {
+    initialRouteName: "complete-profile",
+};
 
 export default function OnboardingLayout() {
     return (
         <Stack>
             <Stack.Screen
-                name="index"
+                name="complete-profile"
                 options={{
                     headerShown: false,
-                    title: "Profil vervollständigen",
+                    title: "Complete profile",
                 }}
             />
         </Stack>

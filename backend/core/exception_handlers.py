@@ -59,6 +59,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     from auth.exceptions import (
         AuthenticationServiceUnavailableError,
         AuthenticationTokenError,
+        EmailChallengeRateLimitedError,
         EmailVerificationAttemptsExceededError,
         InvalidEmailVerificationError,
         InvalidMagicLinkError,
@@ -108,7 +109,10 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     _register_many(
         app,
-        (EmailVerificationAttemptsExceededError,),
+        (
+            EmailChallengeRateLimitedError,
+            EmailVerificationAttemptsExceededError,
+        ),
         status.HTTP_429_TOO_MANY_REQUESTS,
     )
 

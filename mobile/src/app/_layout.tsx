@@ -56,6 +56,12 @@ export default function RootLayout() {
             >
               <Stack.Screen name="(app)" />
             </Stack.Protected>
+
+            <Stack.Protected guard={Boolean(user)}>
+              <Stack.Screen name="auth-success" />
+            </Stack.Protected>
+
+            <Stack.Screen name="auth/email/link" />
           </Stack>
         </QueryClientProvider>
     );

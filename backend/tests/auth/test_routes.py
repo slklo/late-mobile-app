@@ -13,6 +13,7 @@ from auth.dependencies import (
     get_user_service,
 )
 from auth.exceptions import (
+    EmailChallengeRateLimitedError,
     EmailVerificationAttemptsExceededError,
     InvalidEmailVerificationError,
     InvalidMagicLinkError,
@@ -51,6 +52,9 @@ class StubAuthService:
         self,
         email: str,
     ) -> IssueEmailChallengeResult:
+        if email == "limited@example.com":
+            raise EmailChallengeRateLimitedError()
+
         challenge_id = uuid4()
 
         if email == EXISTING_USER_EMAIL:
@@ -275,6 +279,17 @@ def test_invalid_email_is_rejected(client: TestClient) -> None:
     response = post_email(client, "not-an-email")
 
     assert response.status_code == 422
+
+
+def test_email_request_maps_resend_cooldown(
+    client: TestClient,
+) -> None:
+    response = post_email(client, "limited@example.com")
+
+    assert response.status_code == 429
+    assert response.json()["error"]["code"] == (
+        "EMAIL_CHALLENGE_RATE_LIMITED"
+    )
 
 
 def test_secret_is_logged_only_in_development(

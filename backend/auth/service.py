@@ -15,6 +15,7 @@ from auth.challenge_secrets import (
 )
 from auth.exceptions import (
     AuthenticationServiceUnavailableError,
+    EmailChallengeRateLimitedError,
     EmailVerificationAttemptsExceededError,
     InvalidEmailVerificationError,
     InvalidMagicLinkError,
@@ -95,6 +96,18 @@ class AuthService:
         email: str,
     ) -> IssueEmailChallengeResult:
         normalized_email = normalize_email(email)
+
+        if self.config.resend_cooldown_seconds > 0:
+            cooldown_acquired = (
+                await self.challenges.acquire_resend_cooldown(
+                    normalized_email,
+                    self.config.resend_cooldown_seconds,
+                )
+            )
+
+            if not cooldown_acquired:
+                raise EmailChallengeRateLimitedError()
+
         user = self.users.get_by_email(normalized_email)
 
         challenge_id = uuid4()

@@ -8,6 +8,14 @@ type ApiErrorBody = {
     };
 }
 
+export function getApiErrorCode(error: unknown): string | null {
+    if (!axios.isAxiosError<ApiErrorBody>(error)) {
+        return null;
+    }
+
+    return error.response?.data?.error?.code ?? null;
+}
+
 export function getApiErrorMessage(
     error: unknown,
     fallback: string,
@@ -32,7 +40,7 @@ export function getApiErrorMessage(
     }
 
     if (!error.response) {
-        return "Der Server ist nicht erreichbar";
+        return "The server is not reachable.";
     }
 
     return fallback;

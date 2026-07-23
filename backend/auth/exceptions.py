@@ -20,6 +20,11 @@ class EmailVerificationAttemptsExceededError(AppError):
     message = "Too many verification attempts"
 
 
+class EmailChallengeRateLimitedError(AppError):
+    code = "EMAIL_CHALLENGE_RATE_LIMITED"
+    message = "Please wait before requesting another sign-in email"
+
+
 class InvalidMagicLinkError(AppError):
     code = "INVALID_MAGIC_LINK"
     message = "Invalid or expired magic link"

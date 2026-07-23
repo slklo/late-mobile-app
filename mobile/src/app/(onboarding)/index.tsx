@@ -1,6 +1,6 @@
+import { router } from "expo-router";
 import { useState } from "react";
 import {
-    ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -10,9 +10,11 @@ import {
     View,
 } from "react-native";
 
+import { AuthButton } from "@/features/auth/components/AuthButton";
 import { useCompleteProfile } from "@/features/auth/hooks/useCompleteProfile";
 import { useLogout } from "@/features/auth/hooks/useLogout";
 import { useAuthStore } from "@/features/auth/store/authStore";
+import { authColors } from "@/features/auth/theme";
 import { getApiErrorMessage } from "@/shared/api/errors";
 
 
@@ -29,18 +31,23 @@ export default function CompleteProfileScreen() {
         const normalizedName = fullName.trim();
 
         if (!normalizedName) {
-            setValidationError("Bitte gib deinen Namen ein.");
+            setValidationError("Please enter your name.");
             return;
         }
 
         setValidationError(null);
-        completeProfile.mutate({ full_name: normalizedName });
+        completeProfile.mutate(
+            { full_name: normalizedName },
+            {
+                onSuccess: () => router.replace("/auth-success"),
+            },
+        );
     };
 
     const requestError = completeProfile.isError
         ? getApiErrorMessage(
             completeProfile.error,
-            "Dein Profil konnte nicht gespeichert werden.",
+            "Your profile could not be saved.",
         )
         : null;
     const errorMessage = validationError ?? requestError;
@@ -52,19 +59,19 @@ export default function CompleteProfileScreen() {
         >
             <View style={styles.content}>
                 <View style={styles.badge}>
-                    <Text style={styles.badgeText}>FAST GESCHAFFT</Text>
+                    <Text style={styles.badgeText}>ALMOST DONE</Text>
                 </View>
 
                 <View style={styles.heading}>
-                    <Text style={styles.title}>Wie dürfen wir dich nennen?</Text>
+                    <Text style={styles.title}>How should we call you?</Text>
                     <Text style={styles.subtitle}>
-                        Ergänze deinen Namen, bevor du die verfügbaren Angebote
-                        entdeckst.
+                        Add your name before discovering the available food
+                        near you.
                     </Text>
                 </View>
 
                 <View style={styles.form}>
-                    <Text style={styles.label}>Vollständiger Name</Text>
+                    <Text style={styles.label}>FULL NAME</Text>
                     <TextInput
                         autoCapitalize="words"
                         autoComplete="name"
@@ -75,7 +82,7 @@ export default function CompleteProfileScreen() {
                             setValidationError(null);
                         }}
                         onSubmitEditing={submitProfile}
-                        placeholder="Zum Beispiel Alex Morgan"
+                        placeholder="For example Alex Morgan"
                         returnKeyType="done"
                         style={styles.input}
                         value={fullName}
@@ -87,23 +94,12 @@ export default function CompleteProfileScreen() {
                         </Text>
                     ) : null}
 
-                    <Pressable
+                    <AuthButton
                         disabled={completeProfile.isPending}
+                        label="Complete profile"
+                        loading={completeProfile.isPending}
                         onPress={submitProfile}
-                        style={({ pressed }) => [
-                            styles.primaryButton,
-                            pressed && styles.pressed,
-                            completeProfile.isPending && styles.disabled,
-                        ]}
-                    >
-                        {completeProfile.isPending ? (
-                            <ActivityIndicator color="#ffffff" />
-                        ) : (
-                            <Text style={styles.primaryButtonText}>
-                                Angebote entdecken
-                            </Text>
-                        )}
-                    </Pressable>
+                    />
                 </View>
 
                 <Pressable
@@ -112,7 +108,7 @@ export default function CompleteProfileScreen() {
                     style={({ pressed }) => pressed && styles.pressed}
                 >
                     <Text style={styles.logoutText}>
-                        Andere E-Mail-Adresse verwenden
+                        Use another email address
                     </Text>
                 </Pressable>
             </View>
@@ -123,7 +119,7 @@ export default function CompleteProfileScreen() {
 
 const styles = StyleSheet.create({
     screen: {
-        backgroundColor: "#f7f3ec",
+        backgroundColor: authColors.background,
         flex: 1,
         justifyContent: "center",
         padding: 24,
@@ -133,13 +129,13 @@ const styles = StyleSheet.create({
     },
     badge: {
         alignSelf: "flex-start",
-        backgroundColor: "#dff3e4",
+        backgroundColor: authColors.greenLight,
         borderRadius: 999,
         paddingHorizontal: 12,
         paddingVertical: 7,
     },
     badgeText: {
-        color: "#0b5d4e",
+        color: authColors.green,
         fontSize: 12,
         fontWeight: "800",
         letterSpacing: 0.8,
@@ -148,14 +144,14 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     title: {
-        color: "#1f2a24",
+        color: authColors.text,
         fontSize: 34,
         fontWeight: "800",
         letterSpacing: -0.8,
         lineHeight: 40,
     },
     subtitle: {
-        color: "#68716c",
+        color: authColors.muted,
         fontSize: 17,
         lineHeight: 25,
     },
@@ -163,49 +159,33 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     label: {
-        color: "#34443c",
+        color: authColors.text,
         fontSize: 13,
         fontWeight: "700",
         letterSpacing: 0.5,
     },
     input: {
-        backgroundColor: "#ffffff",
-        borderColor: "#d8ddd9",
+        backgroundColor: authColors.card,
+        borderColor: authColors.border,
         borderRadius: 16,
         borderWidth: 1,
-        color: "#1f2a24",
+        color: authColors.text,
         fontSize: 17,
         minHeight: 56,
         paddingHorizontal: 16,
     },
     error: {
-        color: "#b42318",
+        color: authColors.errorText,
         fontSize: 14,
         lineHeight: 20,
     },
-    primaryButton: {
-        alignItems: "center",
-        backgroundColor: "#0a6b55",
-        borderRadius: 16,
-        justifyContent: "center",
-        minHeight: 56,
-        paddingHorizontal: 18,
-    },
-    primaryButtonText: {
-        color: "#ffffff",
-        fontSize: 16,
-        fontWeight: "800",
-    },
     logoutText: {
-        color: "#0a6b55",
+        color: authColors.green,
         fontSize: 15,
         fontWeight: "700",
         textAlign: "center",
     },
     pressed: {
         opacity: 0.72,
-    },
-    disabled: {
-        opacity: 0.6,
     },
 });

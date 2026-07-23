@@ -2,8 +2,11 @@ import asyncio
 import re
 from dataclasses import dataclass
 
+import pytest
+
 from auth.challenge_repository import ChallengeKind, ChallengeRecord
 from auth.challenge_secrets import hash_challenge_secret
+from auth.exceptions import EmailChallengeRateLimitedError
 from auth.service import (
     AuthService,
     AuthServiceConfig,
@@ -41,6 +44,16 @@ class StubChallengeRepository:
     def __init__(self):
         self.saved_challenge: ChallengeRecord | None = None
         self.saved_ttl: int | None = None
+        self.cooldown_acquired = True
+        self.cooldown_request: tuple[str, int] | None = None
+
+    async def acquire_resend_cooldown(
+        self,
+        normalized_email: str,
+        ttl_seconds: int,
+    ) -> bool:
+        self.cooldown_request = normalized_email, ttl_seconds
+        return self.cooldown_acquired
 
     async def save_challenge(
         self,
@@ -99,6 +112,7 @@ def test_new_user_receives_six_digit_code() -> None:
         key=TEST_CHALLENGE_SECRET,
     )
     assert challenges.saved_ttl == 600
+    assert challenges.cooldown_request == ("test@example.com", 60)
 
 
 def test_existing_user_receives_magic_link_token() -> None:
@@ -153,3 +167,29 @@ def test_internal_secrets_are_excluded_from_repr() -> None:
 
     assert result.delivery.secret not in repr(result.delivery)
     assert TEST_CHALLENGE_SECRET not in repr(service.config)
+
+
+def test_repeated_request_is_rejected_during_cooldown() -> None:
+    service, users, challenges = create_service(user=None)
+    challenges.cooldown_acquired = False
+
+    with pytest.raises(EmailChallengeRateLimitedError):
+        request_challenge(service)
+
+    assert users.requested_email is None
+    assert challenges.saved_challenge is None
+
+
+def test_zero_cooldown_skips_redis_lock() -> None:
+    service, _, challenges = create_service(user=None)
+    service.config = AuthServiceConfig(
+        challenge_secret=TEST_CHALLENGE_SECRET,
+        challenge_ttl_seconds=600,
+        resend_cooldown_seconds=0,
+        magic_link_token_bytes=32,
+        code_max_attempts=5,
+    )
+
+    request_challenge(service)
+
+    assert challenges.cooldown_request is None

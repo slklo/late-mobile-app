@@ -1,0 +1,18 @@
+export const authColors = {
+    background: "#F7F3EC",
+    card: "#FFFFFF",
+    green: "#2D5A27",
+    greenDark: "#1F3F1C",
+    greenLight: "#E8F0E5",
+    text: "#1F2A24",
+    muted: "#737A74",
+    placeholder: "#A8AAA6",
+    accent: "#E8923A",
+    success: "#DFF3E4",
+    successText: "#1A5C2A",
+    error: "#FEF2F2",
+    errorText: "#B42318",
+    errorBorder: "#FECACA",
+    border: "#E8E4DC",
+    overlay: "rgba(0, 0, 0, 0.38)",
+} as const;
