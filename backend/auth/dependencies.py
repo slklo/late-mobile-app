@@ -3,10 +3,12 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from redis.asyncio import Redis
 from sqlalchemy.orm import Session
 
+from auth.challenge_repository import ChallengeRepository
 from auth.exceptions import (
     AuthenticationServiceUnavailableError,
     AuthenticationTokenError,
 )
+from auth.service import AuthService
 from auth.token_service import decode_access_token
 from core.database import get_db
 from users.repository import UserRepository
@@ -26,6 +28,16 @@ def get_redis(request: Request) -> Redis:
         raise AuthenticationServiceUnavailableError()
 
     return redis_client
+
+
+def get_auth_service(
+    db: Session = Depends(get_db),
+    redis: Redis = Depends(get_redis),
+) -> AuthService:
+    return AuthService(
+        users=UserRepository(db),
+        challenges=ChallengeRepository(redis),
+    )
 
 
 def get_current_user(
