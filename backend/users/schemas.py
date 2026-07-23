@@ -11,6 +11,8 @@ class UserRead(BaseModel):
     full_name: str | None
     is_active: bool
     created_at: datetime
+    email_verified_at: datetime | None
+    profile_completed_at: datetime | None
 
 
 class UserCreate(BaseModel):

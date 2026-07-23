@@ -17,6 +17,7 @@ from auth.exceptions import (
     AuthenticationServiceUnavailableError,
     EmailVerificationAttemptsExceededError,
     InvalidEmailVerificationError,
+    InvalidMagicLinkError,
 )
 from auth.schemas import (
     AuthNextStep,
@@ -189,23 +190,53 @@ class AuthService:
         if not user.is_active:
             raise InvalidEmailVerificationError()
 
-        return AuthSessionResponse(
-            access_token=create_access_token(user.id),
-            user=UserRead.model_validate(user),
-            next_step=(
-                AuthNextStep.COMPLETE_PROFILE
-                if user.full_name is None
-                else AuthNextStep.EXPLORE
-            ),
-        )
+        return self._create_session(user)
+
+    async def consume_magic_link(
+        self,
+        challenge_id: UUID,
+        token: str,
+    ) -> AuthSessionResponse:
+        challenge = await self.challenges.get_challenge(challenge_id)
+
+        if (
+            challenge is None
+            or challenge.kind is not ChallengeKind.EXISTING_USER
+            or not self._secret_matches(token, challenge)
+        ):
+            raise InvalidMagicLinkError()
+
+        consumed = await self.challenges.consume_challenge(challenge_id)
+
+        if not self._is_valid_consumed_magic_link(
+            challenge_id=challenge_id,
+            token=token,
+            challenge=consumed,
+        ):
+            raise InvalidMagicLinkError()
+
+        assert consumed is not None
+        user = self.users.get_by_email(consumed.email)
+
+        if user is None or not user.is_active:
+            raise InvalidMagicLinkError()
+
+        return self._create_session(user)
 
     def _code_matches(
         self,
         code: str,
         challenge: ChallengeRecord,
     ) -> bool:
+        return self._secret_matches(code, challenge)
+
+    def _secret_matches(
+        self,
+        candidate: str,
+        challenge: ChallengeRecord,
+    ) -> bool:
         return verify_challenge_secret(
-            code,
+            candidate,
             challenge.secret_hash,
             key=self.config.challenge_secret,
         )
@@ -242,3 +273,29 @@ class AuthService:
                 raise AuthenticationServiceUnavailableError()
 
             return user
+
+    def _is_valid_consumed_magic_link(
+        self,
+        *,
+        challenge_id: UUID,
+        token: str,
+        challenge: ChallengeRecord | None,
+    ) -> bool:
+        return (
+            challenge is not None
+            and challenge.challenge_id == challenge_id
+            and challenge.kind is ChallengeKind.EXISTING_USER
+            and self._secret_matches(token, challenge)
+        )
+
+    @staticmethod
+    def _create_session(user: User) -> AuthSessionResponse:
+        return AuthSessionResponse(
+            access_token=create_access_token(user.id),
+            user=UserRead.model_validate(user),
+            next_step=(
+                AuthNextStep.COMPLETE_PROFILE
+                if user.profile_completed_at is None
+                else AuthNextStep.EXPLORE
+            ),
+        )

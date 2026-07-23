@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -13,6 +15,7 @@ class UserService:
 
     def create_user(self, data: UserCreate) -> User:
         email = data.email.lower().strip()
+        now = datetime.now(timezone.utc)
 
         existing_user = self.repository.get_by_email(email)
 
@@ -22,6 +25,13 @@ class UserService:
         user = User(
             email=email,
             full_name=data.full_name,
+            email_verified_at=now,
+            profile_completed_at=(
+                now
+                if data.full_name is not None
+                and data.full_name.strip()
+                else None
+            ),
         )
 
         self.repository.add(user)
@@ -47,6 +57,18 @@ class UserService:
         user = self.get_user_by_id(user_id)
 
         user.full_name = data.full_name
+        self.db.commit()
+        self.db.refresh(user)
+
+        return user
+
+    def complete_profile(self, user_id: int, full_name: str) -> User:
+        user = self.get_user_by_id(user_id)
+        user.full_name = full_name
+
+        if user.profile_completed_at is None:
+            user.profile_completed_at = datetime.now(timezone.utc)
+
         self.db.commit()
         self.db.refresh(user)
 

@@ -28,6 +28,13 @@ class StubUser:
     full_name: str | None = None
     is_active: bool = True
     created_at: datetime = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    email_verified_at: datetime | None = datetime(
+        2026,
+        1,
+        1,
+        tzinfo=timezone.utc,
+    )
+    profile_completed_at: datetime | None = None
 
 
 class StubUserRepository:

@@ -20,6 +20,7 @@ export default function RootLayout() {
     );
 
     const clearUser = useAuthStore((state) => state.clearUser);
+    const isProfileComplete = Boolean(user?.profile_completed_at);
 
     useAuthBootstrap();
 
@@ -44,7 +45,15 @@ export default function RootLayout() {
               <Stack.Screen name="(auth)" />
             </Stack.Protected>
         
-            <Stack.Protected guard={Boolean(user)}>
+            <Stack.Protected
+              guard={Boolean(user) && !isProfileComplete}
+            >
+              <Stack.Screen name="(onboarding)" />
+            </Stack.Protected>
+
+            <Stack.Protected
+              guard={Boolean(user) && isProfileComplete}
+            >
               <Stack.Screen name="(app)" />
             </Stack.Protected>
           </Stack>

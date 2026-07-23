@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     auth_challenge_ttl_seconds: int = Field(default=600, gt=0)
     auth_resend_cooldown_seconds: int = Field(default=60, ge=0)
     auth_magic_link_token_bytes: int = Field(default=32, ge=32)
+    auth_magic_link_app_url: str = Field(
+        default="lateplate://auth/email/link",
+        min_length=1,
+    )
     auth_code_max_attempts: int = Field(default=5, ge=1)
 
     model_config = SettingsConfigDict(

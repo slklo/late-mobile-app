@@ -42,6 +42,12 @@ def get_auth_service(
     )
 
 
+def get_user_service(
+    db: Session = Depends(get_db),
+) -> UserService:
+    return UserService(db)
+
+
 def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: Session = Depends(get_db),

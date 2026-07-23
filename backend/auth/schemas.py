@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from users.schemas import UserRead
 
 from typing import Literal
@@ -37,6 +37,20 @@ class ConsumeLinkRequest(AuthRequest):
         max_length=256,
         pattern=r"^[A-Za-z0-9_-]+$",
     )
+
+class CompleteProfileRequest(AuthRequest):
+    full_name: str = Field(
+        min_length=1,
+        max_length=150,
+    )
+
+    @field_validator("full_name", mode="before")
+    @classmethod
+    def _strip_full_name(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+
+        return value.strip()
 
 class AuthSessionResponse(BaseModel):
     access_token: str

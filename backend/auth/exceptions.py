@@ -18,3 +18,8 @@ class InvalidEmailVerificationError(AppError):
 class EmailVerificationAttemptsExceededError(AppError):
     code = "EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED"
     message = "Too many verification attempts"
+
+
+class InvalidMagicLinkError(AppError):
+    code = "INVALID_MAGIC_LINK"
+    message = "Invalid or expired magic link"
