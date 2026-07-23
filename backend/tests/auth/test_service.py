@@ -29,6 +29,14 @@ class StubUserRepository:
         return self.user
 
 
+class StubUserService:
+    def __init__(self, users: StubUserRepository):
+        self.users = users
+
+    def create_user(self, data):
+        raise AssertionError("create_user was not expected in this test")
+
+
 class StubChallengeRepository:
     def __init__(self):
         self.saved_challenge: ChallengeRecord | None = None
@@ -53,10 +61,12 @@ def create_service(
         challenge_ttl_seconds=600,
         resend_cooldown_seconds=60,
         magic_link_token_bytes=32,
+        code_max_attempts=5,
     )
 
     service = AuthService(
         users=users,  # type: ignore[arg-type]
+        user_service=StubUserService(users),  # type: ignore[arg-type]
         challenges=challenges,  # type: ignore[arg-type]
         config=config,
     )

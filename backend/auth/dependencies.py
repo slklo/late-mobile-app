@@ -13,6 +13,7 @@ from auth.token_service import decode_access_token
 from core.database import get_db
 from users.repository import UserRepository
 from users.schemas import UserRead
+from users.service import UserService
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -36,6 +37,7 @@ def get_auth_service(
 ) -> AuthService:
     return AuthService(
         users=UserRepository(db),
+        user_service=UserService(db),
         challenges=ChallengeRepository(redis),
     )
 

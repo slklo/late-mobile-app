@@ -59,6 +59,8 @@ def register_exception_handlers(app: FastAPI) -> None:
     from auth.exceptions import (
         AuthenticationServiceUnavailableError,
         AuthenticationTokenError,
+        EmailVerificationAttemptsExceededError,
+        InvalidEmailVerificationError,
     )
     from users.exceptions import (
         EmailAlreadyRegisteredError,
@@ -92,6 +94,18 @@ def register_exception_handlers(app: FastAPI) -> None:
             AuthenticationServiceUnavailableError,
         ),
         status.HTTP_503_SERVICE_UNAVAILABLE
+    )
+
+    _register_many(
+        app,
+        (InvalidEmailVerificationError,),
+        status.HTTP_400_BAD_REQUEST,
+    )
+
+    _register_many(
+        app,
+        (EmailVerificationAttemptsExceededError,),
+        status.HTTP_429_TOO_MANY_REQUESTS,
     )
 
     @app.exception_handler(Exception)

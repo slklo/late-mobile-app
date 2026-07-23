@@ -8,3 +8,13 @@ class AuthenticationTokenError(AppError):
 class AuthenticationServiceUnavailableError(AppError):
     code = "AUTHENTICATION_SERVICE_UNAVAILABLE"
     message = "Authentication is temporarily unavailable"
+
+
+class InvalidEmailVerificationError(AppError):
+    code = "INVALID_EMAIL_VERIFICATION"
+    message = "Invalid or expired verification code"
+
+
+class EmailVerificationAttemptsExceededError(AppError):
+    code = "EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED"
+    message = "Too many verification attempts"

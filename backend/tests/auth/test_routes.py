@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 import pytest
@@ -7,14 +8,24 @@ from fastapi.testclient import TestClient
 
 from auth.challenge_repository import ChallengeKind
 from auth.dependencies import get_auth_service
+from auth.exceptions import (
+    EmailVerificationAttemptsExceededError,
+    InvalidEmailVerificationError,
+)
 from auth.routes import router
-from auth.schemas import EmailChallengeResponse
+from auth.schemas import (
+    AuthNextStep,
+    AuthSessionResponse,
+    EmailChallengeResponse,
+)
 from auth.service import (
     ChallengeDelivery,
     IssueEmailChallengeResult,
     NEUTRAL_EMAIL_CHALLENGE_MESSAGE,
 )
 from core.config import settings
+from core.exception_handlers import register_exception_handlers
+from users.schemas import UserRead
 
 
 NEW_USER_EMAIL = "new@example.com"
@@ -26,6 +37,7 @@ EXISTING_USER_TOKEN = "a" * 43
 class StubAuthService:
     def __init__(self):
         self.last_delivery: ChallengeDelivery | None = None
+        self.last_verification: tuple[UUID, str] | None = None
 
     async def request_email_challenge(
         self,
@@ -58,6 +70,31 @@ class StubAuthService:
             delivery=delivery,
         )
 
+    async def verify_email_code(
+        self,
+        challenge_id: UUID,
+        code: str,
+    ) -> AuthSessionResponse:
+        self.last_verification = challenge_id, code
+
+        if code == "000000":
+            raise InvalidEmailVerificationError()
+
+        if code == "999999":
+            raise EmailVerificationAttemptsExceededError()
+
+        return AuthSessionResponse(
+            access_token="test-access-token",
+            user=UserRead(
+                id=101,
+                email=NEW_USER_EMAIL,
+                full_name=None,
+                is_active=True,
+                created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            ),
+            next_step=AuthNextStep.COMPLETE_PROFILE,
+        )
+
 
 @pytest.fixture
 def auth_service() -> StubAuthService:
@@ -67,6 +104,7 @@ def auth_service() -> StubAuthService:
 @pytest.fixture
 def client(auth_service: StubAuthService):
     app = FastAPI()
+    register_exception_handlers(app)
     app.include_router(router, prefix="/api/auth")
     app.dependency_overrides[get_auth_service] = lambda: auth_service
 
@@ -162,3 +200,70 @@ def test_secret_is_not_logged_in_production(
     assert response.status_code == 202
     assert auth_service.last_delivery is not None
     assert auth_service.last_delivery.secret not in caplog.text
+
+
+def test_verify_code_returns_session_without_verification_code(
+    client: TestClient,
+    auth_service: StubAuthService,
+) -> None:
+    challenge_id = uuid4()
+
+    response = client.post(
+        "/api/auth/email/verify-code",
+        json={
+            "challenge_id": str(challenge_id),
+            "code": "123456",
+        },
+    )
+
+    assert response.status_code == 200
+    assert auth_service.last_verification == (challenge_id, "123456")
+    assert set(response.json()) == {
+        "access_token",
+        "token_type",
+        "user",
+        "next_step",
+    }
+    assert "123456" not in response.text
+    assert str(challenge_id) not in response.text
+
+
+@pytest.mark.parametrize(
+    ("code", "expected_status", "expected_error"),
+    [
+        ("000000", 400, "INVALID_EMAIL_VERIFICATION"),
+        (
+            "999999",
+            429,
+            "EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED",
+        ),
+    ],
+)
+def test_verify_code_maps_business_errors(
+    client: TestClient,
+    code: str,
+    expected_status: int,
+    expected_error: str,
+) -> None:
+    response = client.post(
+        "/api/auth/email/verify-code",
+        json={
+            "challenge_id": str(uuid4()),
+            "code": code,
+        },
+    )
+
+    assert response.status_code == expected_status
+    assert response.json()["error"]["code"] == expected_error
+
+
+def test_verify_code_rejects_malformed_code(client: TestClient) -> None:
+    response = client.post(
+        "/api/auth/email/verify-code",
+        json={
+            "challenge_id": str(uuid4()),
+            "code": "12345A",
+        },
+    )
+
+    assert response.status_code == 422

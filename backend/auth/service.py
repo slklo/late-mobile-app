@@ -11,10 +11,25 @@ from auth.challenge_secrets import (
     generate_otp_code,
     hash_challenge_secret,
     normalize_email,
+    verify_challenge_secret,
 )
-from auth.schemas import EmailChallengeResponse
+from auth.exceptions import (
+    AuthenticationServiceUnavailableError,
+    EmailVerificationAttemptsExceededError,
+    InvalidEmailVerificationError,
+)
+from auth.schemas import (
+    AuthNextStep,
+    AuthSessionResponse,
+    EmailChallengeResponse,
+)
+from auth.token_service import create_access_token
 from core.config import settings
+from users.exceptions import EmailAlreadyRegisteredError
+from users.models import User
 from users.repository import UserRepository
+from users.schemas import UserCreate, UserRead
+from users.service import UserService
 
 
 NEUTRAL_EMAIL_CHALLENGE_MESSAGE = (
@@ -42,6 +57,7 @@ class AuthServiceConfig:
     challenge_ttl_seconds: int
     resend_cooldown_seconds: int
     magic_link_token_bytes: int
+    code_max_attempts: int
 
     @classmethod
     def from_settings(cls) -> "AuthServiceConfig":
@@ -56,6 +72,7 @@ class AuthServiceConfig:
             magic_link_token_bytes=(
                 settings.auth_magic_link_token_bytes
             ),
+            code_max_attempts=settings.auth_code_max_attempts,
         )
 
 
@@ -63,10 +80,12 @@ class AuthService:
     def __init__(
         self,
         users: UserRepository,
+        user_service: UserService,
         challenges: ChallengeRepository,
         config: AuthServiceConfig | None = None,
     ):
         self.users = users
+        self.user_service = user_service
         self.challenges = challenges
         self.config = config or AuthServiceConfig.from_settings()
 
@@ -126,3 +145,100 @@ class AuthService:
             )
 
         return ChallengeKind.NEW_USER, generate_otp_code()
+
+    async def verify_email_code(
+        self,
+        challenge_id: UUID,
+        code: str,
+    ) -> AuthSessionResponse:
+        challenge = await self.challenges.get_challenge(challenge_id)
+
+        if challenge is None or challenge.kind is not ChallengeKind.NEW_USER:
+            raise InvalidEmailVerificationError()
+
+        if challenge.attempts >= self.config.code_max_attempts:
+            await self.challenges.consume_challenge(challenge_id)
+            raise EmailVerificationAttemptsExceededError()
+
+        if not self._code_matches(code, challenge):
+            attempts = await self.challenges.increment_failed_attempts(
+                challenge_id,
+            )
+
+            if attempts is None:
+                raise InvalidEmailVerificationError()
+
+            if attempts >= self.config.code_max_attempts:
+                await self.challenges.consume_challenge(challenge_id)
+                raise EmailVerificationAttemptsExceededError()
+
+            raise InvalidEmailVerificationError()
+
+        consumed = await self.challenges.consume_challenge(challenge_id)
+
+        if not self._is_valid_consumed_code(
+            challenge_id=challenge_id,
+            code=code,
+            challenge=consumed,
+        ):
+            raise InvalidEmailVerificationError()
+
+        assert consumed is not None
+        user = self._get_or_create_user(consumed.email)
+
+        if not user.is_active:
+            raise InvalidEmailVerificationError()
+
+        return AuthSessionResponse(
+            access_token=create_access_token(user.id),
+            user=UserRead.model_validate(user),
+            next_step=(
+                AuthNextStep.COMPLETE_PROFILE
+                if user.full_name is None
+                else AuthNextStep.EXPLORE
+            ),
+        )
+
+    def _code_matches(
+        self,
+        code: str,
+        challenge: ChallengeRecord,
+    ) -> bool:
+        return verify_challenge_secret(
+            code,
+            challenge.secret_hash,
+            key=self.config.challenge_secret,
+        )
+
+    def _is_valid_consumed_code(
+        self,
+        *,
+        challenge_id: UUID,
+        code: str,
+        challenge: ChallengeRecord | None,
+    ) -> bool:
+        return (
+            challenge is not None
+            and challenge.challenge_id == challenge_id
+            and challenge.kind is ChallengeKind.NEW_USER
+            and challenge.attempts < self.config.code_max_attempts
+            and self._code_matches(code, challenge)
+        )
+
+    def _get_or_create_user(self, email: str) -> User:
+        user = self.users.get_by_email(email)
+
+        if user is not None:
+            return user
+
+        try:
+            return self.user_service.create_user(
+                UserCreate(email=email),
+            )
+        except EmailAlreadyRegisteredError:
+            user = self.users.get_by_email(email)
+
+            if user is None:
+                raise AuthenticationServiceUnavailableError()
+
+            return user

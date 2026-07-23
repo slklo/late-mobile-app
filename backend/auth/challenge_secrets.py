@@ -30,3 +30,13 @@ def hash_challenge_secret(secret: str, *, key: str) -> str:
         secret.encode("utf-8"),
         hashlib.sha256,
     ).hexdigest()
+
+
+def verify_challenge_secret(
+    candidate: str,
+    expected_hash: str,
+    *,
+    key: str,
+) -> bool:
+    candidate_hash = hash_challenge_secret(candidate, key=key)
+    return hmac.compare_digest(candidate_hash, expected_hash)

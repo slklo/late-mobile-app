@@ -3,7 +3,12 @@ import logging
 from fastapi import APIRouter, Depends, status
 
 from auth.dependencies import get_auth_service, get_current_user
-from auth.schemas import EmailAuthRequest, EmailChallengeResponse
+from auth.schemas import (
+    AuthSessionResponse,
+    EmailAuthRequest,
+    EmailChallengeResponse,
+    VerifyCodeRequest,
+)
 from auth.service import AuthService, ChallengeDelivery
 from core.config import settings
 from users.schemas import UserRead
@@ -39,6 +44,20 @@ async def request_email_challenge(
     _log_development_challenge(result.delivery)
 
     return result.response
+
+
+@router.post(
+    "/email/verify-code",
+    response_model=AuthSessionResponse,
+)
+async def verify_email_code(
+    payload: VerifyCodeRequest,
+    service: AuthService = Depends(get_auth_service),
+) -> AuthSessionResponse:
+    return await service.verify_email_code(
+        challenge_id=payload.challenge_id,
+        code=payload.code,
+    )
 
 
 @router.get("/me", response_model=UserRead)
