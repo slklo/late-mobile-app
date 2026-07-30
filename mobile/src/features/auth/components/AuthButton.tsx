@@ -1,9 +1,9 @@
 import {
     ActivityIndicator,
-    Pressable,
     StyleSheet,
     Text,
-    type PressableProps,
+    TouchableOpacity,
+    type TouchableOpacityProps,
 } from "react-native";
 
 import { authColors } from "../theme";
@@ -11,7 +11,7 @@ import { authColors } from "../theme";
 type AuthButtonProps = {
     label: string;
     loading?: boolean;
-} & Pick<PressableProps, "disabled" | "onPress">;
+} & Pick<TouchableOpacityProps, "disabled" | "onPress">;
 
 export function AuthButton({
     disabled = false,
@@ -22,14 +22,14 @@ export function AuthButton({
     const isDisabled = disabled || loading;
 
     return (
-        <Pressable
+        <TouchableOpacity
+            activeOpacity={0.88}
             accessibilityRole="button"
             disabled={isDisabled}
             onPress={onPress}
-            style={({ pressed }) => [
+            style={[
                 styles.button,
                 isDisabled && styles.disabled,
-                pressed && !isDisabled && styles.pressed,
             ]}
         >
             {loading ? (
@@ -37,7 +37,7 @@ export function AuthButton({
             ) : (
                 <Text style={styles.label}>{label}</Text>
             )}
-        </Pressable>
+        </TouchableOpacity>
     );
 }
 
@@ -65,9 +65,5 @@ const styles = StyleSheet.create({
         backgroundColor: "#BFCDBD",
         elevation: 0,
         shadowOpacity: 0,
-    },
-    pressed: {
-        opacity: 0.88,
-        transform: [{ scale: 0.98 }],
     },
 });
