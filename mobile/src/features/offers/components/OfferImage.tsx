@@ -3,11 +3,18 @@ import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 type OfferImageProps = {
+    height?: number;
     imageUrl?: string | null;
     offerTitle: string;
+    placeholderLabel?: string;
 };
 
-export function OfferImage({ imageUrl, offerTitle }: OfferImageProps) {
+export function OfferImage({
+    height = 156,
+    imageUrl,
+    offerTitle,
+    placeholderLabel = "LatePlate",
+}: OfferImageProps) {
     const [failedUrl, setFailedUrl] = useState<string | null>(null);
     const normalizedUrl = imageUrl?.trim() || null;
     const shouldShowPlaceholder = (
@@ -18,10 +25,12 @@ export function OfferImage({ imageUrl, offerTitle }: OfferImageProps) {
         return (
             <View
                 accessibilityLabel={`No image available for ${offerTitle}`}
-                style={[styles.frame, styles.placeholder]}
+                style={[styles.frame, styles.placeholder, { height }]}
             >
                 <View style={styles.placeholderMark} />
-                <Text style={styles.placeholderText}>LatePlate</Text>
+                <Text numberOfLines={1} style={styles.placeholderText}>
+                    {placeholderLabel}
+                </Text>
             </View>
         );
     }
@@ -34,7 +43,7 @@ export function OfferImage({ imageUrl, offerTitle }: OfferImageProps) {
             onError={() => setFailedUrl(normalizedUrl)}
             recyclingKey={normalizedUrl}
             source={{ uri: normalizedUrl }}
-            style={styles.frame}
+            style={[styles.frame, { height }]}
             transition={150}
         />
     );
@@ -43,7 +52,6 @@ export function OfferImage({ imageUrl, offerTitle }: OfferImageProps) {
 const styles = StyleSheet.create({
     frame: {
         backgroundColor: "#EDE8DC",
-        height: 160,
         width: "100%",
     },
     placeholder: {
@@ -63,5 +71,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "700",
         letterSpacing: 0.3,
+        maxWidth: "80%",
     },
 });

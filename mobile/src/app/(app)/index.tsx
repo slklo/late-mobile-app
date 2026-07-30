@@ -1,9 +1,12 @@
+import { useMemo } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useLogout } from "@/features/auth/hooks/useLogout";
 import { useAuthStore } from "@/features/auth/store/authStore";
-import { OfferImage } from "@/features/offers/components/OfferImage";
+import { OfferCard } from "@/features/offers/components/OfferCard";
 import { useOffersQuery } from "@/features/offers/hooks/useOffersQuery";
+import { mapOffersToCardViewModels } from "@/features/offers/mappers/offerCard.mapper";
+import { offerColors } from "@/features/offers/theme";
 
 export default function ExploreScreen() {
     const { data, isLoading, isError, refetch, isRefetching } = (
@@ -11,6 +14,10 @@ export default function ExploreScreen() {
     );
     const user = useAuthStore((state) => state.user);
     const logout = useLogout();
+    const offers = useMemo(
+        () => mapOffersToCardViewModels(data ?? []),
+        [data],
+    );
 
     if (isLoading) {
         return <Text style={styles.centerText}>Offer werden geladen...</Text>;
@@ -43,28 +50,12 @@ export default function ExploreScreen() {
             </View>
 
             <FlatList
-                data={data ?? []}
+                contentContainerStyle={styles.offerList}
+                data={offers}
                 keyExtractor={(item) => String(item.id)}
                 onRefresh={refetch}
                 refreshing={isRefetching}
-                renderItem={({ item }) => (
-                    <View style={styles.offerCard}>
-                        <OfferImage
-                            imageUrl={item.image_url}
-                            offerTitle={item.title}
-                        />
-                        <View style={styles.offerContent}>
-                            <Text style={styles.offerTitle}>{item.title}</Text>
-                            <Text style={styles.restaurant}>
-                                {item.restaurant.name}
-                            </Text>
-                            <Text style={styles.price}>
-                                {item.discounted_price} statt{" "}
-                                {item.original_price}
-                            </Text>
-                        </View>
-                    </View>
-                )}
+                renderItem={({ item }) => <OfferCard offer={item} />}
             />
         </View>
     );
@@ -73,7 +64,7 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
     screen: {
         flex: 1,
-        backgroundColor: "#f7f7f8",
+        backgroundColor: offerColors.background,
         padding: 16,
     },
     centerText: {
@@ -118,31 +109,8 @@ const styles = StyleSheet.create({
     pressed: {
         opacity: 0.75,
     },
-    offerCard: {
-        backgroundColor: "#fff",
-        borderColor: "#e5e7eb",
-        borderRadius: 8,
-        borderWidth: 1,
-        marginBottom: 12,
-        overflow: "hidden",
-    },
-    offerContent: {
-        padding: 16,
-    },
-    offerTitle: {
-        color: "#111827",
-        fontSize: 17,
-        fontWeight: "700",
-    },
-    restaurant: {
-        color: "#4b5563",
-        fontSize: 14,
-        marginTop: 6,
-    },
-    price: {
-        color: "#047857",
-        fontSize: 15,
-        fontWeight: "700",
-        marginTop: 8,
+    offerList: {
+        gap: 18,
+        paddingBottom: 24,
     },
 });
