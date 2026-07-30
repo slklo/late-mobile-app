@@ -2,57 +2,72 @@ import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useLogout } from "@/features/auth/hooks/useLogout";
 import { useAuthStore } from "@/features/auth/store/authStore";
+import { OfferImage } from "@/features/offers/components/OfferImage";
 import { useOffersQuery } from "@/features/offers/hooks/useOffersQuery";
 
 export default function ExploreScreen() {
-    const {data, isLoading, isError, refetch, isRefetching} = useOffersQuery();
+    const { data, isLoading, isError, refetch, isRefetching } = (
+        useOffersQuery()
+    );
     const user = useAuthStore((state) => state.user);
     const logout = useLogout();
 
     if (isLoading) {
-        return <Text style={styles.centerText}>Offer werden geladen...</Text>
+        return <Text style={styles.centerText}>Offer werden geladen...</Text>;
     }
 
     if (isError) {
-        return <Text style={styles.centerText}>Offers konnten nicht geladen werden.</Text>
+        return (
+            <Text style={styles.centerText}>
+                Offers konnten nicht geladen werden.
+            </Text>
+        );
     }
 
-      return (
+    return (
         <View style={styles.screen}>
-        <View style={styles.header}>
-            <View style={styles.userInfo}>
-                <Text style={styles.kicker}>Eingeloggt als</Text>
-                <Text style={styles.email}>{user?.email}</Text>
+            <View style={styles.header}>
+                <View style={styles.userInfo}>
+                    <Text style={styles.kicker}>Eingeloggt als</Text>
+                    <Text style={styles.email}>{user?.email}</Text>
+                </View>
+                <Pressable
+                    onPress={logout}
+                    style={({ pressed }) => [
+                        styles.logoutButton,
+                        pressed && styles.pressed,
+                    ]}
+                >
+                    <Text style={styles.logoutText}>Logout</Text>
+                </Pressable>
             </View>
-            <Pressable
-                onPress={logout}
-                style={({ pressed }) => [
-                    styles.logoutButton,
-                    pressed && styles.pressed,
-                ]}
-            >
-                <Text style={styles.logoutText}>Logout</Text>
-            </Pressable>
-        </View>
 
-        <FlatList
-            data={data ?? []}
-            keyExtractor={(item) => String(item.id)}
-            refreshing={isRefetching}
-            onRefresh={refetch}
-            renderItem={({ item }) => (
-            <View style={styles.offerCard}>
-                <Text style={styles.offerTitle}>{item.title}</Text>
-                <Text style={styles.restaurant}>{item.restaurant.name}</Text>
-                <Text style={styles.price}>
-                {item.discounted_price} statt {item.original_price}
-                </Text>
-            </View>
-            )}
-        />
+            <FlatList
+                data={data ?? []}
+                keyExtractor={(item) => String(item.id)}
+                onRefresh={refetch}
+                refreshing={isRefetching}
+                renderItem={({ item }) => (
+                    <View style={styles.offerCard}>
+                        <OfferImage
+                            imageUrl={item.image_url}
+                            offerTitle={item.title}
+                        />
+                        <View style={styles.offerContent}>
+                            <Text style={styles.offerTitle}>{item.title}</Text>
+                            <Text style={styles.restaurant}>
+                                {item.restaurant.name}
+                            </Text>
+                            <Text style={styles.price}>
+                                {item.discounted_price} statt{" "}
+                                {item.original_price}
+                            </Text>
+                        </View>
+                    </View>
+                )}
+            />
         </View>
-  );
-
+    );
 }
 
 const styles = StyleSheet.create({
@@ -109,6 +124,9 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         borderWidth: 1,
         marginBottom: 12,
+        overflow: "hidden",
+    },
+    offerContent: {
         padding: 16,
     },
     offerTitle: {
