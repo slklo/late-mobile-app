@@ -40,15 +40,25 @@ def get_redis(request: Request) -> Redis:
 RedisDep = Annotated[Redis, Depends(get_redis)]
 
 
+def get_challenge_repository(redis: RedisDep) -> ChallengeRepository:
+    return ChallengeRepository(redis)
+
+
+ChallengeRepositoryDep = Annotated[
+    ChallengeRepository,
+    Depends(get_challenge_repository),
+]
+
+
 def get_auth_service(
     users: UserRepositoryDep,
     user_service: UserServiceDep,
-    redis: RedisDep,
+    challenges: ChallengeRepositoryDep,
 ) -> AuthService:
     return AuthService(
         users=users,
         user_service=user_service,
-        challenges=ChallengeRepository(redis),
+        challenges=challenges,
     )
 
 
