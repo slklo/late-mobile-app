@@ -23,9 +23,3 @@ OfferRepositoryDep = Annotated[
 
 def get_offer_service(repository: OfferRepositoryDep) -> OfferService:
     return OfferService(repository)
-
-
-OfferServiceDep = Annotated[
-    OfferService,
-    Depends(get_offer_service),
-]

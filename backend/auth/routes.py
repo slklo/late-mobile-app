@@ -20,8 +20,9 @@ from auth.schemas import (
 )
 from auth.service import AuthService, ChallengeDelivery
 from core.config import settings
-from users.dependencies import UserServiceDep
+from users.dependencies import get_user_service
 from users.schemas import UserRead
+from users.service import UserService
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +125,7 @@ async def consume_email_link(
 )
 def complete_current_user_profile(
     payload: CompleteProfileRequest,
-    service: UserServiceDep,
+    service: UserService = Depends(get_user_service),
     current_user: UserRead = Depends(get_current_user),
 ) -> UserRead:
     user = service.complete_profile(
