@@ -10,7 +10,6 @@ from auth.challenge_repository import ChallengeKind
 from auth.dependencies import (
     get_auth_service,
     get_current_user,
-    get_user_service,
 )
 from auth.exceptions import (
     EmailChallengeRateLimitedError,
@@ -31,6 +30,7 @@ from auth.service import (
 )
 from core.config import settings
 from core.exception_handlers import register_exception_handlers
+from users.dependencies import get_user_service
 from users.schemas import UserRead
 
 

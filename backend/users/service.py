@@ -1,17 +1,16 @@
 from datetime import datetime, timezone
 
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
 
+from users.exceptions import EmailAlreadyRegisteredError, UserNotFoundError
 from users.models import User
 from users.repository import UserRepository
 from users.schemas import UserCreate, UserProfileUpdate
-from users.exceptions import EmailAlreadyRegisteredError, UserNotFoundError
+
 
 class UserService:
-    def __init__(self, db: Session):
-        self.db = db
-        self.repository = UserRepository(db)
+    def __init__(self, repository: UserRepository):
+        self.repository = repository
 
     def create_user(self, data: UserCreate) -> User:
         email = data.email.lower().strip()
@@ -34,16 +33,10 @@ class UserService:
             ),
         )
 
-        self.repository.add(user)
         try:
-            self.db.commit()
+            return self.repository.save(user)
         except IntegrityError as exc:
-            self.db.rollback()
             raise EmailAlreadyRegisteredError() from exc
-
-        self.db.refresh(user)
-
-        return user
 
     def get_user_by_id(self, user_id: int) -> User:
         user = self.repository.get_by_id(user_id)
@@ -57,10 +50,7 @@ class UserService:
         user = self.get_user_by_id(user_id)
 
         user.full_name = data.full_name
-        self.db.commit()
-        self.db.refresh(user)
-
-        return user
+        return self.repository.save(user)
 
     def complete_profile(self, user_id: int, full_name: str) -> User:
         user = self.get_user_by_id(user_id)
@@ -69,7 +59,4 @@ class UserService:
         if user.profile_completed_at is None:
             user.profile_completed_at = datetime.now(timezone.utc)
 
-        self.db.commit()
-        self.db.refresh(user)
-
-        return user
+        return self.repository.save(user)

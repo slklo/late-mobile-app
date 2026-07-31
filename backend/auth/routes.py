@@ -9,7 +9,6 @@ from fastapi.responses import RedirectResponse
 from auth.dependencies import (
     get_auth_service,
     get_current_user,
-    get_user_service,
 )
 from auth.schemas import (
     AuthSessionResponse,
@@ -21,8 +20,8 @@ from auth.schemas import (
 )
 from auth.service import AuthService, ChallengeDelivery
 from core.config import settings
+from users.dependencies import UserServiceDep
 from users.schemas import UserRead
-from users.service import UserService
 
 logger = logging.getLogger(__name__)
 
@@ -125,8 +124,8 @@ async def consume_email_link(
 )
 def complete_current_user_profile(
     payload: CompleteProfileRequest,
+    service: UserServiceDep,
     current_user: UserRead = Depends(get_current_user),
-    service: UserService = Depends(get_user_service),
 ) -> UserRead:
     user = service.complete_profile(
         user_id=current_user.id,
