@@ -7,6 +7,7 @@ import { OfferCard } from "./OfferCard";
 type OfferSectionProps = {
     cardWidth: number;
     emptyLabel: string;
+    onOfferPress: (offer: OfferCardViewModel) => void;
     offers: OfferCardViewModel[];
     title: string;
 };
@@ -18,6 +19,7 @@ function CardSeparator() {
 export function OfferSection({
     cardWidth,
     emptyLabel,
+    onOfferPress,
     offers,
     title,
 }: OfferSectionProps) {
@@ -34,7 +36,11 @@ export function OfferSection({
                     keyExtractor={(offer) => String(offer.id)}
                     removeClippedSubviews={false}
                     renderItem={({ item }) => (
-                        <OfferCard offer={item} width={cardWidth} />
+                        <OfferCard
+                            offer={item}
+                            onPress={() => onOfferPress(item)}
+                            width={cardWidth}
+                        />
                     )}
                     showsHorizontalScrollIndicator={false}
                 />

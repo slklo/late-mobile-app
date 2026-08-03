@@ -1,4 +1,5 @@
 import { StatusBar } from "expo-status-bar";
+import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
     RefreshControl,
@@ -38,6 +39,7 @@ function getGreeting(hour: number): string {
 }
 
 export default function ExploreScreen() {
+    const router = useRouter();
     const { width: screenWidth } = useWindowDimensions();
     const { data, isLoading, isError, refetch, isRefetching } = (
         useOffersQuery()
@@ -151,12 +153,20 @@ export default function ExploreScreen() {
                         <OfferSection
                             cardWidth={cardWidth}
                             emptyLabel="No recommended offers in this category."
+                            onOfferPress={(offer) => router.push({
+                                pathname: "./offers/[offerId]",
+                                params: { offerId: String(offer.id) },
+                            })}
                             offers={sections.recommended}
                             title="Recommended offers"
                         />
                         <OfferSection
                             cardWidth={cardWidth}
                             emptyLabel="No other offers in this category."
+                            onOfferPress={(offer) => router.push({
+                                pathname: "./offers/[offerId]",
+                                params: { offerId: String(offer.id) },
+                            })}
                             offers={sections.inArea}
                             title="In your area"
                         />

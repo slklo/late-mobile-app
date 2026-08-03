@@ -1,6 +1,7 @@
 import { SymbolView } from "expo-symbols";
 import { useState } from "react";
 import {
+    Pressable,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -19,6 +20,7 @@ import { OfferImage } from "./OfferImage";
 
 type OfferCardProps = {
     offer: OfferCardViewModel;
+    onPress: () => void;
     width?: DimensionValue;
 };
 
@@ -34,12 +36,24 @@ function FallbackIcon({ children }: { children: string }) {
     return <Text style={styles.fallbackIcon}>{children}</Text>;
 }
 
-export function OfferCard({ offer, width = "100%" }: OfferCardProps) {
+export function OfferCard({
+    offer,
+    onPress,
+    width = "100%",
+}: OfferCardProps) {
     const [isFavorite, setFavorite] = useState(false);
 
     return (
         <View style={[styles.shadowContainer, { width }]}>
-            <View style={styles.card}>
+            <Pressable
+                accessibilityLabel={`View ${offer.offerTitle} from ${offer.restaurantName}`}
+                accessibilityRole="button"
+                onPress={onPress}
+                style={({ pressed }) => [
+                    styles.card,
+                    pressed && styles.cardPressed,
+                ]}
+            >
                 <View style={styles.imageArea}>
                     <OfferImage
                         height={156}
@@ -71,7 +85,10 @@ export function OfferCard({ offer, width = "100%" }: OfferCardProps) {
                         accessibilityRole="button"
                         accessibilityState={{ selected: isFavorite }}
                         activeOpacity={0.78}
-                        onPress={() => setFavorite((current) => !current)}
+                        onPress={(event) => {
+                            event.stopPropagation();
+                            setFavorite((current) => !current);
+                        }}
                         style={styles.favoriteButton}
                     >
                         <SymbolView
@@ -143,7 +160,7 @@ export function OfferCard({ offer, width = "100%" }: OfferCardProps) {
                         </Text>
                     </View>
                 </View>
-            </View>
+            </Pressable>
         </View>
     );
 }
@@ -169,6 +186,10 @@ const styles = StyleSheet.create({
         borderRadius: 22,
         borderWidth: 1,
         overflow: "hidden",
+    },
+    cardPressed: {
+        opacity: 0.92,
+        transform: [{ scale: 0.99 }],
     },
     content: {
         gap: 4,
