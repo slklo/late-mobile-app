@@ -49,6 +49,10 @@ export default function OfferDetailRoute() {
         router.replace("/");
     }
 
+    function handleExplore() {
+        router.replace("/");
+    }
+
     if (offerIdResult.error !== null) {
         return (
             <OfferDetailState
@@ -81,10 +85,10 @@ export default function OfferDetailRoute() {
 
         return (
             <OfferDetailState
-                actionLabel={isNotFound ? undefined : "Try again"}
+                actionLabel={isNotFound ? "Back to Explore" : "Try again"}
                 description={
                     isNotFound
-                        ? "This offer no longer exists or is unavailable."
+                        ? "It may have been removed or is no longer being offered."
                         : getApiErrorMessage(
                             offerQuery.error,
                             "We could not load this offer. Please try again.",
@@ -92,11 +96,15 @@ export default function OfferDetailRoute() {
                 }
                 onAction={
                     isNotFound
-                        ? undefined
+                        ? handleExplore
                         : () => void offerQuery.refetch()
                 }
                 onBack={handleBack}
-                title={isNotFound ? "Offer not found" : "Something went wrong"}
+                title={
+                    isNotFound
+                        ? "This offer is no longer available"
+                        : "Something went wrong"
+                }
             />
         );
     }

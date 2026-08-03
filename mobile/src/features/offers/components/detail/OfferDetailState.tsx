@@ -51,7 +51,9 @@ export function OfferDetailState({
                         style={styles.indicator}
                     />
                 ) : null}
-                <Text style={styles.title}>{title}</Text>
+                <Text accessibilityRole="header" style={styles.title}>
+                    {title}
+                </Text>
                 <Text style={styles.description}>{description}</Text>
 
                 {actionLabel && onAction ? (
