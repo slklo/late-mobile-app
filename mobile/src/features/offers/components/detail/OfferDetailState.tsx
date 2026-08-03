@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { offerColors } from "../theme";
+import { offerColors } from "../../theme";
 
 type OfferDetailStateProps = {
     actionLabel?: string;

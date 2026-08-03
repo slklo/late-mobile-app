@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { OfferDetailView } from "@/features/offers/components/OfferDetailView";
-import { OfferDetailState } from "@/features/offers/components/OfferDetailState";
+import { OfferDetailState } from "@/features/offers/components/detail/OfferDetailState";
 import { useOfferDetailQuery } from "@/features/offers/hooks/useOfferDetailQuery";
 import { mapOfferToDetailViewModel } from "@/features/offers/mappers/offerDetail.mapper";
 import {
