@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { OfferDetailView } from "@/features/offers/components/OfferDetailView";
 import { OfferDetailState } from "@/features/offers/components/OfferDetailState";
 import { useOfferDetailQuery } from "@/features/offers/hooks/useOfferDetailQuery";
+import { mapOfferToDetailViewModel } from "@/features/offers/mappers/offerDetail.mapper";
 import { getApiErrorCode } from "@/shared/api/errors";
 
 function parseOfferId(value: string | string[] | undefined): number | null {
@@ -76,5 +77,10 @@ export default function OfferDetailRoute() {
         );
     }
 
-    return <OfferDetailView offer={offerQuery.data} onBack={handleBack} />;
+    return (
+        <OfferDetailView
+            offer={mapOfferToDetailViewModel(offerQuery.data)}
+            onBack={handleBack}
+        />
+    );
 }

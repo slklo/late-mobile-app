@@ -1,6 +1,6 @@
 import { SymbolView } from "expo-symbols";
 import { StatusBar } from "expo-status-bar";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
     ScrollView,
     StyleSheet,
@@ -10,29 +10,14 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { mapOfferToCardViewModel } from "../mappers/offerCard.mapper";
 import { offerColors } from "../theme";
-import type { OfferRead } from "../types/offer.types";
+import type { OfferDetailViewModel } from "../types/offerDetail.types";
 import { OfferImage } from "./OfferImage";
 
 type OfferDetailViewProps = {
-    offer: OfferRead;
+    offer: OfferDetailViewModel;
     onBack: () => void;
 };
-
-function formatPickupDate(value: string): string {
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-        return "Date unavailable";
-    }
-
-    return new Intl.DateTimeFormat("en-IE", {
-        day: "numeric",
-        month: "long",
-        weekday: "long",
-    }).format(date);
-}
 
 function FallbackIcon({ children }: { children: string }) {
     return <Text style={styles.fallbackIcon}>{children}</Text>;
@@ -41,18 +26,6 @@ function FallbackIcon({ children }: { children: string }) {
 export function OfferDetailView({ offer, onBack }: OfferDetailViewProps) {
     const insets = useSafeAreaInsets();
     const [isFavorite, setFavorite] = useState(false);
-    const viewModel = useMemo(
-        () => mapOfferToCardViewModel(offer),
-        [offer],
-    );
-    const isUnavailable = (
-        !offer.is_active || viewModel.isExpired || viewModel.isSoldOut
-    );
-    const unavailableMessage = !offer.is_active
-        ? "This offer is no longer active."
-        : viewModel.isExpired
-            ? "The pickup window for this offer has ended."
-            : "This offer is currently sold out.";
 
     return (
         <View style={styles.screen}>
@@ -64,9 +37,9 @@ export function OfferDetailView({ offer, onBack }: OfferDetailViewProps) {
                 <View style={styles.hero}>
                     <OfferImage
                         height={330}
-                        imageUrl={viewModel.imageUrl}
-                        offerTitle={viewModel.offerTitle}
-                        placeholderLabel={viewModel.imagePlaceholderLabel}
+                        imageUrl={offer.imageUrl}
+                        offerTitle={offer.title}
+                        placeholderLabel={offer.imagePlaceholderLabel}
                     />
                     <View pointerEvents="none" style={styles.heroScrim} />
 
@@ -127,38 +100,41 @@ export function OfferDetailView({ offer, onBack }: OfferDetailViewProps) {
                     <View style={styles.titleRow}>
                         <View style={styles.titleContent}>
                             <Text style={styles.restaurantName}>
-                                {viewModel.restaurantName}
+                                {offer.restaurantName}
                             </Text>
                             <Text style={styles.offerTitle}>
-                                {viewModel.offerTitle}
+                                {offer.title}
                             </Text>
                         </View>
 
-                        {viewModel.badge ? (
-                            <View style={styles.badge}>
-                                <Text style={styles.badgeText}>
-                                    {viewModel.badge.label}
-                                </Text>
-                            </View>
-                        ) : null}
+                        <View style={styles.badge}>
+                            <Text style={styles.badgeText}>
+                                {offer.statusLabel}
+                            </Text>
+                        </View>
                     </View>
 
                     <View style={styles.priceRow}>
                         <Text style={styles.discountedPrice}>
-                            {viewModel.discountedPriceLabel}
+                            {offer.discountedPriceLabel}
                         </Text>
                         <Text style={styles.originalPrice}>
-                            {viewModel.originalPriceLabel}
+                            {offer.originalPriceLabel}
                         </Text>
+                        {offer.savingsLabel ? (
+                            <Text style={styles.savingsLabel}>
+                                {offer.savingsLabel}
+                            </Text>
+                        ) : null}
                     </View>
 
-                    {isUnavailable ? (
+                    {!offer.isAvailable ? (
                         <View style={styles.unavailableBanner}>
                             <Text style={styles.unavailableTitle}>
                                 Offer unavailable
                             </Text>
                             <Text style={styles.unavailableText}>
-                                {unavailableMessage}
+                                {offer.unavailableReason}
                             </Text>
                         </View>
                     ) : (
@@ -167,7 +143,7 @@ export function OfferDetailView({ offer, onBack }: OfferDetailViewProps) {
                                 Available today
                             </Text>
                             <Text style={styles.availableText}>
-                                {offer.quantity_available} {offer.quantity_available === 1 ? "item" : "items"} remaining
+                                {offer.quantityLabel}
                             </Text>
                         </View>
                     )}
@@ -183,10 +159,10 @@ export function OfferDetailView({ offer, onBack }: OfferDetailViewProps) {
                             />
                             <Text style={styles.infoLabel}>Pickup</Text>
                             <Text style={styles.infoValue}>
-                                {formatPickupDate(offer.pickup_start)}
+                                {offer.pickupDateLabel}
                             </Text>
                             <Text style={styles.infoSecondary}>
-                                {viewModel.pickupWindowLabel}
+                                {offer.pickupWindowLabel}
                             </Text>
                         </View>
 
@@ -200,10 +176,10 @@ export function OfferDetailView({ offer, onBack }: OfferDetailViewProps) {
                             />
                             <Text style={styles.infoLabel}>Location</Text>
                             <Text style={styles.infoValue}>
-                                {offer.restaurant.name}
+                                {offer.restaurantName}
                             </Text>
                             <Text style={styles.infoSecondary}>
-                                {offer.restaurant.address}
+                                {offer.restaurantAddress}
                             </Text>
                         </View>
                     </View>
@@ -211,8 +187,7 @@ export function OfferDetailView({ offer, onBack }: OfferDetailViewProps) {
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>What you get</Text>
                         <Text style={styles.bodyText}>
-                            {offer.description?.trim()
-                                || "The restaurant has not added a description for this offer."}
+                            {offer.description}
                         </Text>
                     </View>
 
@@ -221,21 +196,21 @@ export function OfferDetailView({ offer, onBack }: OfferDetailViewProps) {
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Category</Text>
                             <Text style={styles.detailValue}>
-                                {offer.category.name}
+                                {offer.categoryName}
                             </Text>
                         </View>
                         <View style={styles.detailDivider} />
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Quantity</Text>
                             <Text style={styles.detailValue}>
-                                {offer.quantity_available} available
+                                {offer.quantityLabel}
                             </Text>
                         </View>
                         <View style={styles.detailDivider} />
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Pickup window</Text>
                             <Text style={styles.detailValue}>
-                                {viewModel.pickupWindowLabel}
+                                {offer.pickupWindowLabel}
                             </Text>
                         </View>
                     </View>
@@ -409,6 +384,11 @@ const styles = StyleSheet.create({
         height: 44,
         justifyContent: "center",
         width: 44,
+    },
+    savingsLabel: {
+        color: offerColors.primary,
+        fontSize: 12,
+        fontWeight: "800",
     },
     screen: {
         backgroundColor: offerColors.background,
