@@ -22,8 +22,39 @@ type OfferDetailViewProps = {
     onRefresh: () => void;
 };
 
-function FallbackIcon({ children }: { children: string }) {
-    return <Text style={styles.fallbackIcon}>{children}</Text>;
+function FallbackIcon({
+    children,
+    dark = false,
+}: {
+    children: string;
+    dark?: boolean;
+}) {
+    return (
+        <Text
+            style={[
+                styles.fallbackIcon,
+                dark && styles.fallbackIconDark,
+            ]}
+        >
+            {children}
+        </Text>
+    );
+}
+
+function getStatusBadgeColor(statusLabel: string): string {
+    if (statusLabel === "Expired") {
+        return offerColors.expired;
+    }
+
+    if (statusLabel === "Sold out") {
+        return offerColors.soldOut;
+    }
+
+    if (statusLabel === "Unavailable") {
+        return offerColors.urgent;
+    }
+
+    return offerColors.deepGreen;
 }
 
 export function OfferDetailView({
@@ -109,38 +140,32 @@ export function OfferDetailView({
                             />
                         </TouchableOpacity>
                     </View>
+
+                    <View
+                        style={[
+                            styles.heroBadge,
+                            {
+                                backgroundColor: getStatusBadgeColor(
+                                    offer.statusLabel,
+                                ),
+                            },
+                        ]}
+                    >
+                        <Text style={styles.badgeText}>
+                            {offer.statusLabel}
+                        </Text>
+                    </View>
                 </View>
 
                 <View style={styles.contentCard}>
-                    <View style={styles.titleRow}>
-                        <View style={styles.titleContent}>
-                            <Text style={styles.restaurantName}>
-                                {offer.restaurantName}
-                            </Text>
-                            <Text style={styles.offerTitle}>
-                                {offer.title}
-                            </Text>
-                        </View>
-
-                        <View style={styles.badge}>
-                            <Text style={styles.badgeText}>
-                                {offer.statusLabel}
-                            </Text>
-                        </View>
-                    </View>
-
-                    <View style={styles.priceRow}>
-                        <Text style={styles.discountedPrice}>
-                            {offer.discountedPriceLabel}
+                    <Text style={styles.restaurantName}>
+                        {offer.restaurantName}
+                    </Text>
+                    <Text style={styles.offerTitle}>{offer.title}</Text>
+                    <View style={styles.categoryChip}>
+                        <Text style={styles.categoryText}>
+                            {offer.categoryName}
                         </Text>
-                        <Text style={styles.originalPrice}>
-                            {offer.originalPriceLabel}
-                        </Text>
-                        {offer.savingsLabel ? (
-                            <Text style={styles.savingsLabel}>
-                                {offer.savingsLabel}
-                            </Text>
-                        ) : null}
                     </View>
 
                     {!offer.isAvailable ? (
@@ -157,47 +182,8 @@ export function OfferDetailView({
                             <Text style={styles.availableTitle}>
                                 Available today
                             </Text>
-                            <Text style={styles.availableText}>
-                                {offer.quantityLabel}
-                            </Text>
                         </View>
                     )}
-
-                    <View style={styles.infoGrid}>
-                        <View style={styles.infoCard}>
-                            <SymbolView
-                                fallback={<FallbackIcon>Time</FallbackIcon>}
-                                name="clock"
-                                size={20}
-                                tintColor={offerColors.primary}
-                                weight="semibold"
-                            />
-                            <Text style={styles.infoLabel}>Pickup</Text>
-                            <Text style={styles.infoValue}>
-                                {offer.pickupDateLabel}
-                            </Text>
-                            <Text style={styles.infoSecondary}>
-                                {offer.pickupWindowLabel}
-                            </Text>
-                        </View>
-
-                        <View style={styles.infoCard}>
-                            <SymbolView
-                                fallback={<FallbackIcon>Place</FallbackIcon>}
-                                name="location.fill"
-                                size={20}
-                                tintColor={offerColors.primary}
-                                weight="semibold"
-                            />
-                            <Text style={styles.infoLabel}>Location</Text>
-                            <Text style={styles.infoValue}>
-                                {offer.restaurantName}
-                            </Text>
-                            <Text style={styles.infoSecondary}>
-                                {offer.restaurantAddress}
-                            </Text>
-                        </View>
-                    </View>
 
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>What you get</Text>
@@ -207,26 +193,103 @@ export function OfferDetailView({
                     </View>
 
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Offer details</Text>
-                        <View style={styles.detailRow}>
-                            <Text style={styles.detailLabel}>Category</Text>
-                            <Text style={styles.detailValue}>
-                                {offer.categoryName}
+                        <Text style={styles.sectionTitle}>
+                            Pickup details
+                        </Text>
+                        <View style={styles.detailsCard}>
+                            <View style={styles.infoRow}>
+                                <View style={styles.infoIcon}>
+                                    <SymbolView
+                                        fallback={(
+                                            <FallbackIcon dark>Time</FallbackIcon>
+                                        )}
+                                        name="clock"
+                                        size={19}
+                                        tintColor={offerColors.primary}
+                                        weight="semibold"
+                                    />
+                                </View>
+                                <View style={styles.infoContent}>
+                                    <Text style={styles.infoLabel}>
+                                        Pickup date and time
+                                    </Text>
+                                    <Text style={styles.infoValue}>
+                                        {offer.pickupDateLabel}
+                                    </Text>
+                                    <Text style={styles.infoSecondary}>
+                                        {offer.pickupWindowLabel}
+                                    </Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.infoDivider} />
+
+                            <View style={styles.infoRow}>
+                                <View style={styles.infoIcon}>
+                                    <SymbolView
+                                        fallback={(
+                                            <FallbackIcon dark>Place</FallbackIcon>
+                                        )}
+                                        name="location.fill"
+                                        size={19}
+                                        tintColor={offerColors.primary}
+                                        weight="semibold"
+                                    />
+                                </View>
+                                <View style={styles.infoContent}>
+                                    <Text style={styles.infoLabel}>
+                                        Restaurant address
+                                    </Text>
+                                    <Text style={styles.infoValue}>
+                                        {offer.restaurantAddress}
+                                    </Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.infoDivider} />
+
+                            <View style={styles.infoRow}>
+                                <View style={styles.infoIcon}>
+                                    <SymbolView
+                                        fallback={(
+                                            <FallbackIcon dark>Qty</FallbackIcon>
+                                        )}
+                                        name="shippingbox.fill"
+                                        size={19}
+                                        tintColor={offerColors.primary}
+                                        weight="semibold"
+                                    />
+                                </View>
+                                <View style={styles.infoContent}>
+                                    <Text style={styles.infoLabel}>
+                                        Remaining quantity
+                                    </Text>
+                                    <Text style={styles.infoValue}>
+                                        {offer.quantityLabel}
+                                    </Text>
+                                </View>
+                            </View>
+                        </View>
+                    </View>
+
+                    <View style={styles.priceSection}>
+                        <View>
+                            <Text style={styles.priceLabel}>Original price</Text>
+                            <Text style={styles.originalPrice}>
+                                {offer.originalPriceLabel}
                             </Text>
                         </View>
-                        <View style={styles.detailDivider} />
-                        <View style={styles.detailRow}>
-                            <Text style={styles.detailLabel}>Quantity</Text>
-                            <Text style={styles.detailValue}>
-                                {offer.quantityLabel}
+
+                        <View style={styles.currentPriceContainer}>
+                            <Text style={styles.priceLabel}>Today&apos;s price</Text>
+                            <Text style={styles.discountedPrice}>
+                                {offer.discountedPriceLabel}
                             </Text>
-                        </View>
-                        <View style={styles.detailDivider} />
-                        <View style={styles.detailRow}>
-                            <Text style={styles.detailLabel}>Pickup window</Text>
-                            <Text style={styles.detailValue}>
-                                {offer.pickupWindowLabel}
-                            </Text>
+                            {offer.savingsLabel ? (
+                                <Text style={styles.savingsLabel}>
+                                    {offer.savingsLabel}
+                                </Text>
+                            ) : null}
                         </View>
                     </View>
                 </View>
@@ -244,22 +307,10 @@ const styles = StyleSheet.create({
         marginTop: 22,
         padding: 15,
     },
-    availableText: {
-        color: offerColors.mutedText,
-        fontSize: 13,
-        marginTop: 3,
-    },
     availableTitle: {
         color: offerColors.primary,
         fontSize: 14,
         fontWeight: "800",
-    },
-    badge: {
-        alignSelf: "flex-start",
-        backgroundColor: offerColors.deepGreen,
-        borderRadius: 999,
-        paddingHorizontal: 11,
-        paddingVertical: 6,
     },
     badgeText: {
         color: "#FFFFFF",
@@ -271,6 +322,21 @@ const styles = StyleSheet.create({
         fontSize: 15,
         lineHeight: 23,
     },
+    categoryChip: {
+        alignSelf: "flex-start",
+        backgroundColor: offerColors.secondary,
+        borderColor: "#D8D3C7",
+        borderRadius: 999,
+        borderWidth: 1,
+        marginTop: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+    },
+    categoryText: {
+        color: offerColors.primary,
+        fontSize: 12,
+        fontWeight: "700",
+    },
     contentCard: {
         backgroundColor: offerColors.background,
         borderTopLeftRadius: 28,
@@ -280,27 +346,16 @@ const styles = StyleSheet.create({
         paddingTop: 26,
         position: "relative",
     },
-    detailDivider: {
-        backgroundColor: offerColors.border,
-        height: 1,
+    currentPriceContainer: {
+        alignItems: "flex-end",
     },
-    detailLabel: {
-        color: offerColors.mutedText,
-        fontSize: 14,
-    },
-    detailRow: {
-        alignItems: "center",
-        flexDirection: "row",
-        justifyContent: "space-between",
-        paddingVertical: 13,
-    },
-    detailValue: {
-        color: offerColors.deepGreen,
-        flexShrink: 1,
-        fontSize: 14,
-        fontWeight: "700",
-        marginLeft: 20,
-        textAlign: "right",
+    detailsCard: {
+        backgroundColor: offerColors.card,
+        borderColor: offerColors.border,
+        borderRadius: 20,
+        borderWidth: 1,
+        overflow: "hidden",
+        paddingHorizontal: 16,
     },
     discountedPrice: {
         color: offerColors.deepGreen,
@@ -311,6 +366,9 @@ const styles = StyleSheet.create({
         color: "#FFFFFF",
         fontSize: 10,
         fontWeight: "800",
+    },
+    fallbackIconDark: {
+        color: offerColors.primary,
     },
     hero: {
         backgroundColor: offerColors.secondary,
@@ -323,6 +381,14 @@ const styles = StyleSheet.create({
         position: "absolute",
         right: 16,
     },
+    heroBadge: {
+        borderRadius: 999,
+        bottom: 46,
+        paddingHorizontal: 12,
+        paddingVertical: 7,
+        position: "absolute",
+        right: 18,
+    },
     heroScrim: {
         backgroundColor: "rgba(0, 0, 0, 0.18)",
         height: 92,
@@ -331,26 +397,33 @@ const styles = StyleSheet.create({
         right: 0,
         top: 0,
     },
-    infoCard: {
-        backgroundColor: offerColors.card,
-        borderColor: offerColors.border,
-        borderRadius: 18,
-        borderWidth: 1,
+    infoContent: {
         flex: 1,
-        minHeight: 154,
-        padding: 15,
     },
-    infoGrid: {
-        flexDirection: "row",
-        gap: 12,
-        marginTop: 22,
+    infoDivider: {
+        backgroundColor: offerColors.border,
+        height: 1,
+        marginLeft: 54,
+    },
+    infoIcon: {
+        alignItems: "center",
+        backgroundColor: offerColors.secondary,
+        borderRadius: 999,
+        height: 38,
+        justifyContent: "center",
+        width: 38,
     },
     infoLabel: {
         color: offerColors.mutedText,
         fontSize: 11,
         fontWeight: "700",
-        marginTop: 12,
         textTransform: "uppercase",
+    },
+    infoRow: {
+        alignItems: "center",
+        flexDirection: "row",
+        gap: 14,
+        paddingVertical: 16,
     },
     infoSecondary: {
         color: offerColors.mutedText,
@@ -378,11 +451,23 @@ const styles = StyleSheet.create({
         fontSize: 15,
         textDecorationLine: "line-through",
     },
-    priceRow: {
-        alignItems: "baseline",
+    priceLabel: {
+        color: offerColors.mutedText,
+        fontSize: 11,
+        fontWeight: "700",
+        marginBottom: 5,
+        textTransform: "uppercase",
+    },
+    priceSection: {
+        alignItems: "flex-end",
+        backgroundColor: offerColors.card,
+        borderColor: offerColors.border,
+        borderRadius: 20,
+        borderWidth: 1,
         flexDirection: "row",
-        gap: 10,
-        marginTop: 14,
+        justifyContent: "space-between",
+        marginTop: 28,
+        padding: 18,
     },
     restaurantName: {
         color: offerColors.primary,
@@ -420,15 +505,6 @@ const styles = StyleSheet.create({
         fontSize: 19,
         fontWeight: "900",
         marginBottom: 10,
-    },
-    titleContent: {
-        flex: 1,
-        paddingRight: 12,
-    },
-    titleRow: {
-        alignItems: "flex-start",
-        flexDirection: "row",
-        justifyContent: "space-between",
     },
     unavailableBanner: {
         backgroundColor: "#F2E8E4",
