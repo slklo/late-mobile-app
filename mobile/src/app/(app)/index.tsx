@@ -154,7 +154,7 @@ export default function ExploreScreen() {
                             cardWidth={cardWidth}
                             emptyLabel="No recommended offers in this category."
                             onOfferPress={(offer) => router.push({
-                                pathname: "./offers/[offerId]",
+                                pathname: "/offers/[offerId]",
                                 params: { offerId: String(offer.id) },
                             })}
                             offers={sections.recommended}
@@ -164,7 +164,7 @@ export default function ExploreScreen() {
                             cardWidth={cardWidth}
                             emptyLabel="No other offers in this category."
                             onOfferPress={(offer) => router.push({
-                                pathname: "./offers/[offerId]",
+                                pathname: "/offers/[offerId]",
                                 params: { offerId: String(offer.id) },
                             })}
                             offers={sections.inArea}

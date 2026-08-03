@@ -7,7 +7,7 @@ import { OfferCard } from "./OfferCard";
 type OfferSectionProps = {
     cardWidth: number;
     emptyLabel: string;
-    onOfferPress: (offer: OfferCardViewModel) => void;
+    onOfferPress?: (offer: OfferCardViewModel) => void;
     offers: OfferCardViewModel[];
     title: string;
 };
@@ -38,7 +38,11 @@ export function OfferSection({
                     renderItem={({ item }) => (
                         <OfferCard
                             offer={item}
-                            onPress={() => onOfferPress(item)}
+                            onPress={
+                                onOfferPress
+                                    ? () => onOfferPress(item)
+                                    : undefined
+                            }
                             width={cardWidth}
                         />
                     )}

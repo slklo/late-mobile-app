@@ -20,7 +20,7 @@ import { OfferImage } from "./OfferImage";
 
 type OfferCardProps = {
     offer: OfferCardViewModel;
-    onPress: () => void;
+    onPress?: () => void;
     width?: DimensionValue;
 };
 
@@ -47,7 +47,8 @@ export function OfferCard({
         <View style={[styles.shadowContainer, { width }]}>
             <Pressable
                 accessibilityLabel={`View ${offer.offerTitle} from ${offer.restaurantName}`}
-                accessibilityRole="button"
+                accessibilityRole={onPress ? "button" : undefined}
+                disabled={!onPress}
                 onPress={onPress}
                 style={({ pressed }) => [
                     styles.card,
