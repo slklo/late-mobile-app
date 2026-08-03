@@ -2,6 +2,7 @@ import { SymbolView } from "expo-symbols";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import {
+    RefreshControl,
     ScrollView,
     StyleSheet,
     Text,
@@ -15,15 +16,22 @@ import type { OfferDetailViewModel } from "../types/offerDetail.types";
 import { OfferImage } from "./OfferImage";
 
 type OfferDetailViewProps = {
+    isRefetching: boolean;
     offer: OfferDetailViewModel;
     onBack: () => void;
+    onRefresh: () => void;
 };
 
 function FallbackIcon({ children }: { children: string }) {
     return <Text style={styles.fallbackIcon}>{children}</Text>;
 }
 
-export function OfferDetailView({ offer, onBack }: OfferDetailViewProps) {
+export function OfferDetailView({
+    isRefetching,
+    offer,
+    onBack,
+    onRefresh,
+}: OfferDetailViewProps) {
     const insets = useSafeAreaInsets();
     const [isFavorite, setFavorite] = useState(false);
 
@@ -32,6 +40,13 @@ export function OfferDetailView({ offer, onBack }: OfferDetailViewProps) {
             <StatusBar style="light" />
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
+                refreshControl={(
+                    <RefreshControl
+                        onRefresh={onRefresh}
+                        refreshing={isRefetching}
+                        tintColor={offerColors.primary}
+                    />
+                )}
                 showsVerticalScrollIndicator={false}
             >
                 <View style={styles.hero}>

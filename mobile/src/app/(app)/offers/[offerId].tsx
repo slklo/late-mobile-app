@@ -4,15 +4,32 @@ import { OfferDetailView } from "@/features/offers/components/OfferDetailView";
 import { OfferDetailState } from "@/features/offers/components/OfferDetailState";
 import { useOfferDetailQuery } from "@/features/offers/hooks/useOfferDetailQuery";
 import { mapOfferToDetailViewModel } from "@/features/offers/mappers/offerDetail.mapper";
-import { getApiErrorCode } from "@/shared/api/errors";
+import {
+    getApiErrorCode,
+    getApiErrorMessage,
+} from "@/shared/api/errors";
 
-function parseOfferId(value: string | string[] | undefined): number | null {
+type OfferIdResult = {
+    error: "invalid" | "missing" | null;
+    value: number | null;
+};
+
+function parseOfferId(
+    value: string | string[] | undefined,
+): OfferIdResult {
     const rawValue = Array.isArray(value) ? value[0] : value;
+
+    if (rawValue === undefined || rawValue.trim() === "") {
+        return { error: "missing", value: null };
+    }
+
     const parsedValue = Number(rawValue);
 
-    return Number.isInteger(parsedValue) && parsedValue > 0
-        ? parsedValue
-        : null;
+    if (!Number.isInteger(parsedValue) || parsedValue <= 0) {
+        return { error: "invalid", value: null };
+    }
+
+    return { error: null, value: parsedValue };
 }
 
 export default function OfferDetailRoute() {
@@ -20,8 +37,8 @@ export default function OfferDetailRoute() {
         offerId?: string | string[];
     }>();
     const router = useRouter();
-    const offerId = parseOfferId(offerIdParam);
-    const offerQuery = useOfferDetailQuery(offerId);
+    const offerIdResult = parseOfferId(offerIdParam);
+    const offerQuery = useOfferDetailQuery(offerIdResult.value);
 
     function handleBack() {
         if (router.canGoBack()) {
@@ -32,10 +49,14 @@ export default function OfferDetailRoute() {
         router.replace("/");
     }
 
-    if (offerId === null) {
+    if (offerIdResult.error !== null) {
         return (
             <OfferDetailState
-                description="This offer link is invalid. Return to Explore and choose an offer again."
+                description={
+                    offerIdResult.error === "missing"
+                        ? "No offer was selected. Return to Explore and choose an offer."
+                        : "This offer link contains an invalid ID. Return to Explore and choose an offer again."
+                }
                 onBack={handleBack}
                 title="Offer unavailable"
             />
@@ -64,7 +85,10 @@ export default function OfferDetailRoute() {
                 description={
                     isNotFound
                         ? "This offer no longer exists or is unavailable."
-                        : "We could not load this offer. Please check your connection and try again."
+                        : getApiErrorMessage(
+                            offerQuery.error,
+                            "We could not load this offer. Please try again.",
+                        )
                 }
                 onAction={
                     isNotFound
@@ -79,8 +103,10 @@ export default function OfferDetailRoute() {
 
     return (
         <OfferDetailView
+            isRefetching={offerQuery.isRefetching}
             offer={mapOfferToDetailViewModel(offerQuery.data)}
             onBack={handleBack}
+            onRefresh={() => void offerQuery.refetch()}
         />
     );
 }

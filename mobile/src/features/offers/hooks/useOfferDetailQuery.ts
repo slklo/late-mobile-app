@@ -1,17 +1,26 @@
 import { useQuery } from "@tanstack/react-query";
 
+import { getApiErrorCode } from "@/shared/api/errors";
 import { getOfferById } from "../api/offerApi";
 
-export function useOfferDetailQuery(id: number | null) {
+export function useOfferDetailQuery(offerId: number | null) {
+    const hasValidOfferId = (
+        Number.isInteger(offerId) && (offerId ?? 0) > 0
+    );
+
     return useQuery({
-        queryKey: ["offers", id],
+        queryKey: ["offers", offerId],
         queryFn: () => {
-            if (id === null) {
+            if (!hasValidOfferId || offerId === null) {
                 throw new Error("A valid offer id is required");
             }
 
-            return getOfferById(id);
+            return getOfferById(offerId);
         },
-        enabled: id !== null,
+        enabled: hasValidOfferId,
+        retry: (failureCount, error) => (
+            getApiErrorCode(error) !== "OFFER_NOT_FOUND"
+            && failureCount < 2
+        ),
     });
 }
