@@ -1,6 +1,12 @@
 import { StatusBar } from "expo-status-bar";
-import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 import {
     RefreshControl,
     ScrollView,
@@ -19,6 +25,7 @@ import { OfferSection } from "@/features/offers/components/OfferSection";
 import { useOffersQuery } from "@/features/offers/hooks/useOffersQuery";
 import { mapOffersToCardViewModels } from "@/features/offers/mappers/offerCard.mapper";
 import { offerColors } from "@/features/offers/theme";
+import type { OfferCardViewModel } from "@/features/offers/types/offerCard.types";
 import {
     ALL_CATEGORIES,
     filterOffersByCategory,
@@ -40,6 +47,7 @@ function getGreeting(hour: number): string {
 
 export default function ExploreScreen() {
     const router = useRouter();
+    const isOfferNavigationLocked = useRef(false);
     const { width: screenWidth } = useWindowDimensions();
     const { data, isLoading, isError, refetch, isRefetching } = (
         useOffersQuery()
@@ -66,6 +74,22 @@ export default function ExploreScreen() {
     const cardWidth = Math.min(276, Math.max(248, screenWidth - 72));
     const firstName = user?.full_name?.trim().split(/\s+/)[0] || "there";
     const greeting = getGreeting(new Date().getHours());
+
+    useFocusEffect(useCallback(() => {
+        isOfferNavigationLocked.current = false;
+    }, []));
+
+    const handleOfferPress = useCallback((offer: OfferCardViewModel) => {
+        if (isOfferNavigationLocked.current) {
+            return;
+        }
+
+        isOfferNavigationLocked.current = true;
+        router.push({
+            pathname: "/offers/[offerId]",
+            params: { offerId: String(offer.id) },
+        });
+    }, [router]);
 
     useEffect(() => {
         if (!categories.includes(selectedCategory)) {
@@ -153,20 +177,14 @@ export default function ExploreScreen() {
                         <OfferSection
                             cardWidth={cardWidth}
                             emptyLabel="No recommended offers in this category."
-                            onOfferPress={(offer) => router.push({
-                                pathname: "/offers/[offerId]",
-                                params: { offerId: String(offer.id) },
-                            })}
+                            onOfferPress={handleOfferPress}
                             offers={sections.recommended}
                             title="Recommended offers"
                         />
                         <OfferSection
                             cardWidth={cardWidth}
                             emptyLabel="No other offers in this category."
-                            onOfferPress={(offer) => router.push({
-                                pathname: "/offers/[offerId]",
-                                params: { offerId: String(offer.id) },
-                            })}
+                            onOfferPress={handleOfferPress}
                             offers={sections.inArea}
                             title="In your area"
                         />

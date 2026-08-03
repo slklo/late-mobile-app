@@ -1,14 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 
-import { getApiErrorCode } from "@/shared/api/errors";
+import { getApiErrorCode } from "../../../shared/api/errors";
 import { getOfferById } from "../api/offerApi";
 
-export function useOfferDetailQuery(offerId: number | null) {
-    const hasValidOfferId = (
-        Number.isInteger(offerId) && (offerId ?? 0) > 0
-    );
+export function isValidOfferId(offerId: number | null): offerId is number {
+    return Number.isInteger(offerId) && (offerId ?? 0) > 0;
+}
 
-    return useQuery({
+export function createOfferDetailQueryOptions(offerId: number | null) {
+    const hasValidOfferId = isValidOfferId(offerId);
+
+    return queryOptions({
         queryKey: ["offers", offerId],
         queryFn: () => {
             if (!hasValidOfferId || offerId === null) {
@@ -23,4 +25,8 @@ export function useOfferDetailQuery(offerId: number | null) {
             && failureCount < 2
         ),
     });
+}
+
+export function useOfferDetailQuery(offerId: number | null) {
+    return useQuery(createOfferDetailQueryOptions(offerId));
 }

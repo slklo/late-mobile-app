@@ -111,6 +111,7 @@ describe("mapOfferToDetailViewModel", () => {
             "The restaurant has not added a description for this offer.",
         );
         expect(result.discountedPriceLabel).toBe("—");
+        expect(result.imagePlaceholderLabel).toBe("Bakery");
         expect(result.imageUrl).toBeNull();
         expect(result.originalPriceLabel).toBe("—");
         expect(result.pickupDateLabel).toBe("Date unavailable");
