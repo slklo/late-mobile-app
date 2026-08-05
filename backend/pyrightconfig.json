@@ -1,0 +1,25 @@
+{
+  "include": [
+    "."
+  ],
+  "exclude": [
+    "migrations",
+    "tests/seed",
+    "**/__pycache__",
+    ".pytest_cache",
+    "**/node_modules",
+    "**/.*",
+    "venv",
+  ],
+  "extraPaths": [
+    "."
+  ],
+  "pythonVersion": "3.12",
+  "pythonPlatform": "Linux",
+  "typeCheckingMode": "standard",
+  "reportMissingImports": "error",
+  "reportMissingTypeStubs": "none",
+  "reportUnnecessaryTypeIgnoreComment": "warning"
+}
+
+//The exclude list is missing default excludes such as '**/node_modules, **/.*, venv'. Consider adding them to avoid analyzing unnecessary files.

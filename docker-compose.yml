@@ -20,7 +20,7 @@ services:
       "redis-server", 
       "--save",
       "", 
-      "--appendonly", 
+      "--appendonly", # deaktitivert bei Redis die AOF-Persistenz
       "no",
       "--maxmemory",
       "256mb",
