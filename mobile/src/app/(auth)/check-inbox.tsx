@@ -6,7 +6,6 @@ import {
     Platform,
     Pressable,
     ScrollView,
-    StyleSheet,
     Text,
     TextInput,
     View,
@@ -23,7 +22,6 @@ import {
     completeAuthSession,
 } from "@/features/auth/services/completeAuthSession";
 import { useAuthFlowStore } from "@/features/auth/store/authFlowStore";
-import { authColors } from "@/features/auth/theme";
 import { getApiErrorCode, getApiErrorMessage } from "@/shared/api/errors";
 
 function maskEmail(email: string): string {
@@ -174,39 +172,50 @@ export default function CheckInboxScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.screen}>
+        <SafeAreaView className="flex-1 bg-auth-background">
             <KeyboardAvoidingView
                 behavior={Platform.OS === "ios" ? "padding" : undefined}
-                style={styles.flex}
+                className="flex-1"
             >
                 <ScrollView
-                    contentContainerStyle={styles.content}
+                    contentContainerClassName="flex-grow p-6 pb-10"
                     keyboardShouldPersistTaps="handled"
                 >
-                    <Pressable onPress={changeEmail} style={styles.backButton}>
-                        <Text style={styles.backText}>‹ Change email</Text>
+                    <Pressable
+                        className="self-start py-1.5"
+                        onPress={changeEmail}
+                    >
+                        <Text className="text-[15px] font-bold text-auth-green">
+                            ‹ Change email
+                        </Text>
                     </Pressable>
 
-                    <View style={styles.iconBox}>
-                        <Text style={styles.icon}>✉</Text>
+                    <View className="mt-8 size-[66px] items-center justify-center rounded-panel bg-auth-green-light">
+                        <Text className="text-[31px] font-bold text-auth-green">
+                            ✉
+                        </Text>
                     </View>
-                    <Text style={styles.title}>Check your inbox</Text>
-                    <Text style={styles.subtitle}>
+                    <Text className="mt-[22px] text-heading-md font-black tracking-[-0.5px] text-auth-text">
+                        Check your inbox
+                    </Text>
+                    <Text className="mt-2.5 text-body text-auth-muted">
                         We sent sign-in instructions to{" "}
-                        <Text style={styles.email}>{maskEmail(email)}</Text>.
-                        Open the link in the email, or enter the six-digit code
-                        if your email contains one.
+                        <Text className="font-extrabold text-auth-text">
+                            {maskEmail(email)}
+                        </Text>
+                        {". Open the link in the email, or enter the six-digit "}
+                        code if your email contains one.
                     </Text>
 
-                    <Text style={styles.expiryText}>
+                    <Text className="mt-3 text-label text-auth-muted">
                         {isExpired
                             ? "These instructions have expired."
                             : `Instructions expire in ${formatTime(expiresIn)}.`}
                     </Text>
 
                     <Pressable
+                        className="relative mt-[34px] flex-row justify-center gap-[5px]"
                         onPress={() => inputRef.current?.focus()}
-                        style={styles.otpRow}
                     >
                         {Array.from({ length: 6 }, (_, index) => {
                             const digit = code[index] ?? "";
@@ -214,15 +223,22 @@ export default function CheckInboxScreen() {
 
                             return (
                                 <View
+                                    className={`h-14 w-[39px] items-center justify-center rounded-otp border-[1.5px] bg-auth-card ${
+                                        digit
+                                            ? "border-auth-green bg-auth-green-light"
+                                            : "border-auth-border"
+                                    } ${
+                                        isActive ? "border-auth-green" : ""
+                                    } ${
+                                        verify.isError
+                                            ? "border-auth-error-border"
+                                            : ""
+                                    }`}
                                     key={index}
-                                    style={[
-                                        styles.otpCell,
-                                        digit && styles.otpCellFilled,
-                                        isActive && styles.otpCellActive,
-                                        verify.isError && styles.otpCellError,
-                                    ]}
                                 >
-                                    <Text style={styles.otpDigit}>{digit}</Text>
+                                    <Text className="text-heading-sm font-extrabold text-auth-text">
+                                        {digit}
+                                    </Text>
                                 </View>
                             );
                         })}
@@ -241,34 +257,45 @@ export default function CheckInboxScreen() {
                                 verify.reset();
                             }}
                             onSubmitEditing={submitCode}
-                            style={styles.hiddenInput}
+                            className="absolute inset-0 opacity-[0.01]"
                             textContentType="oneTimeCode"
                             value={code}
                         />
                     </Pressable>
 
                     {verify.isError ? (
-                        <Text accessibilityRole="alert" style={styles.error}>
+                        <Text
+                            accessibilityRole="alert"
+                            className="mt-3.5 text-center text-label leading-[19px] text-auth-error-text"
+                        >
                             {verificationErrorMessage(verify.error)}
                         </Text>
                     ) : null}
                     {isExpired && !verify.isError ? (
-                        <Text accessibilityRole="alert" style={styles.error}>
+                        <Text
+                            accessibilityRole="alert"
+                            className="mt-3.5 text-center text-label leading-[19px] text-auth-error-text"
+                        >
                             Request new instructions to continue.
                         </Text>
                     ) : null}
                     {resentMessage ? (
-                        <View style={styles.successNotice}>
-                            <Text style={styles.successText}>{resentMessage}</Text>
+                        <View className="mt-4 rounded-xl bg-auth-success p-3">
+                            <Text className="text-center text-label font-bold text-auth-success-text">
+                                {resentMessage}
+                            </Text>
                         </View>
                     ) : null}
                     {resendError ? (
-                        <Text accessibilityRole="alert" style={styles.error}>
+                        <Text
+                            accessibilityRole="alert"
+                            className="mt-3.5 text-center text-label leading-[19px] text-auth-error-text"
+                        >
                             {resendError}
                         </Text>
                     ) : null}
 
-                    <View style={styles.verifyButton}>
+                    <View className="mt-[30px]">
                         <AuthButton
                             disabled={(
                                 code.length !== 6 || isExpired || isLocked
@@ -280,18 +307,19 @@ export default function CheckInboxScreen() {
                     </View>
 
                     <Pressable
+                        className="mt-[22px] self-center p-2"
                         disabled={resendIn > 0 || resend.isPending}
                         onPress={() => {
                             setResentMessage(null);
                             resend.mutate({ email });
                         }}
-                        style={styles.linkButton}
                     >
                         <Text
-                            style={[
-                                styles.linkText,
-                                resendIn > 0 && styles.linkTextDisabled,
-                            ]}
+                            className={`text-[14px] font-bold ${
+                                resendIn > 0
+                                    ? "text-auth-placeholder"
+                                    : "text-auth-green"
+                            }`}
                         >
                             {resend.isPending
                                 ? "Sending…"
@@ -305,132 +333,3 @@ export default function CheckInboxScreen() {
         </SafeAreaView>
     );
 }
-
-const styles = StyleSheet.create({
-    flex: { flex: 1 },
-    screen: {
-        backgroundColor: authColors.background,
-        flex: 1,
-    },
-    content: {
-        flexGrow: 1,
-        padding: 24,
-        paddingBottom: 40,
-    },
-    backButton: {
-        alignSelf: "flex-start",
-        paddingVertical: 6,
-    },
-    backText: {
-        color: authColors.green,
-        fontSize: 15,
-        fontWeight: "700",
-    },
-    iconBox: {
-        alignItems: "center",
-        backgroundColor: authColors.greenLight,
-        borderRadius: 20,
-        height: 66,
-        justifyContent: "center",
-        marginTop: 32,
-        width: 66,
-    },
-    icon: {
-        color: authColors.green,
-        fontSize: 31,
-        fontWeight: "700",
-    },
-    title: {
-        color: authColors.text,
-        fontSize: 29,
-        fontWeight: "900",
-        letterSpacing: -0.5,
-        marginTop: 22,
-    },
-    subtitle: {
-        color: authColors.muted,
-        fontSize: 15,
-        lineHeight: 23,
-        marginTop: 10,
-    },
-    email: {
-        color: authColors.text,
-        fontWeight: "800",
-    },
-    expiryText: {
-        color: authColors.muted,
-        fontSize: 13,
-        marginTop: 12,
-    },
-    otpRow: {
-        flexDirection: "row",
-        gap: 5,
-        justifyContent: "center",
-        marginTop: 34,
-        position: "relative",
-    },
-    otpCell: {
-        alignItems: "center",
-        backgroundColor: authColors.card,
-        borderColor: authColors.border,
-        borderRadius: 13,
-        borderWidth: 1.5,
-        height: 56,
-        justifyContent: "center",
-        width: 39,
-    },
-    otpCellFilled: {
-        backgroundColor: authColors.greenLight,
-        borderColor: authColors.green,
-    },
-    otpCellActive: {
-        borderColor: authColors.green,
-    },
-    otpCellError: {
-        borderColor: authColors.errorBorder,
-    },
-    otpDigit: {
-        color: authColors.text,
-        fontSize: 22,
-        fontWeight: "800",
-    },
-    hiddenInput: {
-        ...StyleSheet.absoluteFillObject,
-        opacity: 0.01,
-    },
-    error: {
-        color: authColors.errorText,
-        fontSize: 13,
-        lineHeight: 19,
-        marginTop: 14,
-        textAlign: "center",
-    },
-    successNotice: {
-        backgroundColor: authColors.success,
-        borderRadius: 12,
-        marginTop: 16,
-        padding: 12,
-    },
-    successText: {
-        color: authColors.successText,
-        fontSize: 13,
-        fontWeight: "700",
-        textAlign: "center",
-    },
-    verifyButton: {
-        marginTop: 30,
-    },
-    linkButton: {
-        alignSelf: "center",
-        marginTop: 22,
-        padding: 8,
-    },
-    linkText: {
-        color: authColors.green,
-        fontSize: 14,
-        fontWeight: "700",
-    },
-    linkTextDisabled: {
-        color: authColors.placeholder,
-    },
-});

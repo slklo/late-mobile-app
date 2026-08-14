@@ -4,7 +4,6 @@ import {
     KeyboardAvoidingView,
     Platform,
     Pressable,
-    StyleSheet,
     Text,
     TextInput,
     View,
@@ -14,7 +13,6 @@ import { AuthButton } from "@/features/auth/components/AuthButton";
 import { useCompleteProfile } from "@/features/auth/hooks/useCompleteProfile";
 import { useLogout } from "@/features/auth/hooks/useLogout";
 import { useAuthStore } from "@/features/auth/store/authStore";
-import { authColors } from "@/features/auth/theme";
 import { getApiErrorMessage } from "@/shared/api/errors";
 
 
@@ -55,23 +53,29 @@ export default function CompleteProfileScreen() {
     return (
         <KeyboardAvoidingView
             behavior={Platform.OS === "ios" ? "padding" : undefined}
-            style={styles.screen}
+            className="flex-1 justify-center bg-auth-background p-6"
         >
-            <View style={styles.content}>
-                <View style={styles.badge}>
-                    <Text style={styles.badgeText}>ALMOST DONE</Text>
+            <View className="gap-7">
+                <View className="self-start rounded-pill bg-auth-green-light px-3 py-[7px]">
+                    <Text className="text-xs font-extrabold tracking-[0.8px] text-auth-green">
+                        ALMOST DONE
+                    </Text>
                 </View>
 
-                <View style={styles.heading}>
-                    <Text style={styles.title}>How should we call you?</Text>
-                    <Text style={styles.subtitle}>
+                <View className="gap-3">
+                    <Text className="text-display-large font-extrabold tracking-[-0.8px] text-auth-text">
+                        How should we call you?
+                    </Text>
+                    <Text className="text-body-large text-auth-muted">
                         Add your name before discovering the available food
                         near you.
                     </Text>
                 </View>
 
-                <View style={styles.form}>
-                    <Text style={styles.label}>FULL NAME</Text>
+                <View className="gap-3">
+                    <Text className="text-label font-bold tracking-[0.5px] text-auth-text">
+                        FULL NAME
+                    </Text>
                     <TextInput
                         autoCapitalize="words"
                         autoComplete="name"
@@ -84,12 +88,15 @@ export default function CompleteProfileScreen() {
                         onSubmitEditing={submitProfile}
                         placeholder="For example Alex Morgan"
                         returnKeyType="done"
-                        style={styles.input}
+                        className="min-h-14 rounded-control border border-auth-border bg-auth-card px-4 text-[17px] text-auth-text"
                         value={fullName}
                     />
 
                     {errorMessage ? (
-                        <Text accessibilityRole="alert" style={styles.error}>
+                        <Text
+                            accessibilityRole="alert"
+                            className="text-[14px] leading-5 text-auth-error-text"
+                        >
                             {errorMessage}
                         </Text>
                     ) : null}
@@ -103,11 +110,11 @@ export default function CompleteProfileScreen() {
                 </View>
 
                 <Pressable
+                    className="active:opacity-[0.72]"
                     disabled={completeProfile.isPending}
                     onPress={() => void logout()}
-                    style={({ pressed }) => pressed && styles.pressed}
                 >
-                    <Text style={styles.logoutText}>
+                    <Text className="text-center text-[15px] font-bold text-auth-green">
                         Use another email address
                     </Text>
                 </Pressable>
@@ -115,77 +122,3 @@ export default function CompleteProfileScreen() {
         </KeyboardAvoidingView>
     );
 }
-
-
-const styles = StyleSheet.create({
-    screen: {
-        backgroundColor: authColors.background,
-        flex: 1,
-        justifyContent: "center",
-        padding: 24,
-    },
-    content: {
-        gap: 28,
-    },
-    badge: {
-        alignSelf: "flex-start",
-        backgroundColor: authColors.greenLight,
-        borderRadius: 999,
-        paddingHorizontal: 12,
-        paddingVertical: 7,
-    },
-    badgeText: {
-        color: authColors.green,
-        fontSize: 12,
-        fontWeight: "800",
-        letterSpacing: 0.8,
-    },
-    heading: {
-        gap: 12,
-    },
-    title: {
-        color: authColors.text,
-        fontSize: 34,
-        fontWeight: "800",
-        letterSpacing: -0.8,
-        lineHeight: 40,
-    },
-    subtitle: {
-        color: authColors.muted,
-        fontSize: 17,
-        lineHeight: 25,
-    },
-    form: {
-        gap: 12,
-    },
-    label: {
-        color: authColors.text,
-        fontSize: 13,
-        fontWeight: "700",
-        letterSpacing: 0.5,
-    },
-    input: {
-        backgroundColor: authColors.card,
-        borderColor: authColors.border,
-        borderRadius: 16,
-        borderWidth: 1,
-        color: authColors.text,
-        fontSize: 17,
-        minHeight: 56,
-        paddingHorizontal: 16,
-    },
-    error: {
-        color: authColors.errorText,
-        fontSize: 14,
-        lineHeight: 20,
-    },
-    logoutText: {
-        color: authColors.green,
-        fontSize: 15,
-        fontWeight: "700",
-        textAlign: "center",
-    },
-    pressed: {
-        opacity: 0.72,
-    },
-});

@@ -13,7 +13,6 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    useWindowDimensions,
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -48,7 +47,6 @@ function getGreeting(hour: number): string {
 export default function ExploreScreen() {
     const router = useRouter();
     const isOfferNavigationLocked = useRef(false);
-    const { width: screenWidth } = useWindowDimensions();
     const { data, isLoading, isError, refetch, isRefetching } = (
         useOffersQuery()
     );
@@ -71,7 +69,6 @@ export default function ExploreScreen() {
         () => splitOffersForExplore(filteredOffers),
         [filteredOffers],
     );
-    const cardWidth = Math.min(276, Math.max(248, screenWidth - 72));
     const firstName = user?.full_name?.trim().split(/\s+/)[0] || "there";
     const greeting = getGreeting(new Date().getHours());
 
@@ -175,14 +172,12 @@ export default function ExploreScreen() {
                 {filteredOffers.length > 0 ? (
                     <View style={styles.sections}>
                         <OfferSection
-                            cardWidth={cardWidth}
                             emptyLabel="No recommended offers in this category."
                             onOfferPress={handleOfferPress}
                             offers={sections.recommended}
                             title="Recommended offers"
                         />
                         <OfferSection
-                            cardWidth={cardWidth}
                             emptyLabel="No other offers in this category."
                             onOfferPress={handleOfferPress}
                             offers={sections.inArea}

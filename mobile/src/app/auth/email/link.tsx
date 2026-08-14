@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Pressable,
-    StyleSheet,
     Text,
     View,
 } from "react-native";
@@ -13,7 +12,6 @@ import { consumeEmailLink } from "@/features/auth/api/authApi";
 import { completeAuthSession } from "@/features/auth/services/completeAuthSession";
 import { useAuthFlowStore } from "@/features/auth/store/authFlowStore";
 import { useAuthStore } from "@/features/auth/store/authStore";
-import { authColors } from "@/features/auth/theme";
 import type { AuthSession } from "@/features/auth/types/auth.types";
 import { getApiErrorCode } from "@/shared/api/errors";
 
@@ -135,92 +133,38 @@ export default function MagicLinkScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.screen}>
-            <View style={styles.content}>
-                <View style={styles.iconBox}>
-                    <Text style={styles.icon}>{error ? "!" : "✓"}</Text>
+        <SafeAreaView className="flex-1 bg-auth-background">
+            <View className="flex-1 items-center justify-center p-7">
+                <View className="size-[78px] items-center justify-center rounded-3xl bg-auth-green-light">
+                    <Text className="text-[34px] font-black text-auth-green">
+                        {error ? "!" : "✓"}
+                    </Text>
                 </View>
-                <Text style={styles.title}>
+                <Text className="mt-6 text-center text-[28px] font-black text-auth-text">
                     {error ? "Link unavailable" : "Signing you in"}
                 </Text>
-                <Text style={styles.subtitle}>
+                <Text className="mt-2.5 max-w-[330px] text-center text-body text-auth-muted">
                     {error
                         ? error
                         : "Please wait while we securely verify your email link."}
                 </Text>
 
                 {error ? (
-                    <Pressable onPress={leaveCallback} style={styles.button}>
-                        <Text style={styles.buttonText}>
+                    <Pressable
+                        className="mt-[30px] min-w-[220px] rounded-pill bg-auth-green px-6 py-[17px]"
+                        onPress={leaveCallback}
+                    >
+                        <Text className="text-center text-[15px] font-extrabold text-white">
                             {user ? "Continue to app" : "Request a new email"}
                         </Text>
                     </Pressable>
                 ) : (
                     <ActivityIndicator
-                        color={authColors.green}
+                        className="mt-[30px] text-auth-green"
                         size="large"
-                        style={styles.spinner}
                     />
                 )}
             </View>
         </SafeAreaView>
     );
 }
-
-const styles = StyleSheet.create({
-    screen: {
-        backgroundColor: authColors.background,
-        flex: 1,
-    },
-    content: {
-        alignItems: "center",
-        flex: 1,
-        justifyContent: "center",
-        padding: 28,
-    },
-    iconBox: {
-        alignItems: "center",
-        backgroundColor: authColors.greenLight,
-        borderRadius: 24,
-        height: 78,
-        justifyContent: "center",
-        width: 78,
-    },
-    icon: {
-        color: authColors.green,
-        fontSize: 34,
-        fontWeight: "900",
-    },
-    title: {
-        color: authColors.text,
-        fontSize: 28,
-        fontWeight: "900",
-        marginTop: 24,
-        textAlign: "center",
-    },
-    subtitle: {
-        color: authColors.muted,
-        fontSize: 15,
-        lineHeight: 23,
-        marginTop: 10,
-        maxWidth: 330,
-        textAlign: "center",
-    },
-    spinner: {
-        marginTop: 30,
-    },
-    button: {
-        backgroundColor: authColors.green,
-        borderRadius: 999,
-        marginTop: 30,
-        minWidth: 220,
-        paddingHorizontal: 24,
-        paddingVertical: 17,
-    },
-    buttonText: {
-        color: "#FFFFFF",
-        fontSize: 15,
-        fontWeight: "800",
-        textAlign: "center",
-    },
-});

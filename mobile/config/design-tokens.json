@@ -16,7 +16,12 @@
       "error-text": "#B42318",
       "error-border": "#FECACA",
       "border": "#E8E4DC",
-      "overlay": "rgba(0, 0, 0, 0.38)"
+      "overlay": "rgba(0, 0, 0, 0.38)",
+      "disabled": "#BFCDBD",
+      "hero-overlay": "rgba(18, 48, 16, 0.46)",
+      "glass": "rgba(255, 255, 255, 0.18)",
+      "glass-border": "rgba(255, 255, 255, 0.30)",
+      "logo-leaf": "#BCE8A9"
     },
     "offer": {
       "background": "#F5F0E8",
@@ -29,7 +34,22 @@
       "primary": "#2A4E18",
       "secondary": "#EDE8DC",
       "sold-out": "rgba(76, 82, 75, 0.82)",
-      "urgent": "#E07A5F"
+      "urgent": "#E07A5F",
+      "metadata-border": "#D8D3C7",
+      "placeholder-text": "#52634A",
+      "old-price": "#A9B3A5",
+      "detail-old-price": "#99A396",
+      "image-scrim": "rgba(0, 0, 0, 0.10)",
+      "hero-scrim": "rgba(0, 0, 0, 0.18)",
+      "favorite-overlay": "rgba(0, 0, 0, 0.32)",
+      "hero-action": "rgba(18, 31, 17, 0.68)",
+      "hero-action-border": "rgba(255, 255, 255, 0.26)",
+      "available-background": "#E6F2E3",
+      "available-border": "#CADFC5",
+      "unavailable-background": "#F2E8E4",
+      "unavailable-border": "#E1C9C0",
+      "unavailable-title": "#774737",
+      "unavailable-text": "#79645D"
     },
     "content": {
       "primary": "#1C2B1A",
@@ -42,7 +62,11 @@
     "section-title": "10px",
     "chip-x": "15px",
     "chip-y": "9px",
-    "chip-gap": "9px"
+    "chip-gap": "9px",
+    "auth-hero": "310px",
+    "offer-card-image": "156px",
+    "offer-hero": "330px",
+    "success-icon": "108px"
   },
   "fontSize": {
     "detail-body": [
@@ -52,12 +76,54 @@
       }
     ],
     "section-title": "19px",
-    "chip-label": "13px"
+    "chip-label": "13px",
+    "body": [
+      "15px",
+      {
+        "lineHeight": "23px"
+      }
+    ],
+    "body-large": [
+      "17px",
+      {
+        "lineHeight": "25px"
+      }
+    ],
+    "button": "16px",
+    "label": "13px",
+    "heading-sm": "22px",
+    "heading-md": "29px",
+    "display": [
+      "32px",
+      {
+        "lineHeight": "38px"
+      }
+    ],
+    "display-large": [
+      "34px",
+      {
+        "lineHeight": "40px"
+      }
+    ]
   },
   "borderRadius": {
     "control": "16px",
     "panel": "20px",
     "card": "22px",
-    "pill": "999px"
+    "pill": "999px",
+    "otp": "13px",
+    "input": "14px",
+    "sheet": "26px",
+    "detail-shell": "28px"
+  },
+  "boxShadow": {
+    "auth-control": "0px 6px 12px rgba(45, 90, 39, 0.25)",
+    "auth-celebration": "0px 10px 20px rgba(45, 90, 39, 0.25)",
+    "offer-tile": "0px 4px 10px rgba(28, 43, 26, 0.12)"
+  },
+  "elevation": {
+    "auth-control": "5",
+    "auth-celebration": "7",
+    "offer-tile": "4"
   }
 }

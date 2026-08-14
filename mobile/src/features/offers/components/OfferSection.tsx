@@ -1,11 +1,9 @@
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { FlatList, Text, View } from "react-native";
 
-import { offerColors } from "../theme";
 import type { OfferCardViewModel } from "../types/offerCard.types";
 import { OfferCard } from "./OfferCard";
 
 type OfferSectionProps = {
-    cardWidth: number;
     emptyLabel: string;
     onOfferPress?: (offer: OfferCardViewModel) => void;
     offers: OfferCardViewModel[];
@@ -13,23 +11,24 @@ type OfferSectionProps = {
 };
 
 function CardSeparator() {
-    return <View style={styles.separator} />;
+    return <View className="w-3.5" />;
 }
 
 export function OfferSection({
-    cardWidth,
     emptyLabel,
     onOfferPress,
     offers,
     title,
 }: OfferSectionProps) {
     return (
-        <View style={styles.section}>
-            <Text style={styles.title}>{title}</Text>
+        <View className="gap-3">
+            <Text className="px-4 text-section-title font-extrabold text-content-primary">
+                {title}
+            </Text>
 
             {offers.length > 0 ? (
                 <FlatList
-                    contentContainerStyle={styles.listContent}
+                    contentContainerClassName="px-4 pb-2.5"
                     data={offers}
                     horizontal
                     ItemSeparatorComponent={CardSeparator}
@@ -43,39 +42,15 @@ export function OfferSection({
                                     ? () => onOfferPress(item)
                                     : undefined
                             }
-                            width={cardWidth}
                         />
                     )}
                     showsHorizontalScrollIndicator={false}
                 />
             ) : (
-                <Text style={styles.emptyText}>{emptyLabel}</Text>
+                <Text className="px-4 py-5 text-label text-offer-muted-text">
+                    {emptyLabel}
+                </Text>
             )}
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    emptyText: {
-        color: offerColors.mutedText,
-        fontSize: 13,
-        paddingHorizontal: 16,
-        paddingVertical: 20,
-    },
-    listContent: {
-        paddingBottom: 10,
-        paddingHorizontal: 16,
-    },
-    section: {
-        gap: 12,
-    },
-    separator: {
-        width: 14,
-    },
-    title: {
-        color: "#1C2B1A",
-        fontSize: 19,
-        fontWeight: "800",
-        paddingHorizontal: 16,
-    },
-});

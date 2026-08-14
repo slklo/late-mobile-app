@@ -1,14 +1,11 @@
 import { StatusBar } from "expo-status-bar";
 import {
     ActivityIndicator,
-    StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-import { offerColors } from "../../theme";
 
 type OfferDetailStateProps = {
     actionLabel?: string;
@@ -28,42 +25,48 @@ export function OfferDetailState({
     title,
 }: OfferDetailStateProps) {
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView className="flex-1 bg-offer-background">
             <StatusBar style="dark" />
 
-            <View style={styles.header}>
+            <View className="items-start px-[18px] pt-2">
                 <TouchableOpacity
                     accessibilityLabel="Go back"
                     accessibilityRole="button"
                     activeOpacity={0.75}
+                    className="min-h-[42px] items-center justify-center rounded-pill border border-offer-border px-4"
                     onPress={onBack}
-                    style={styles.backButton}
                 >
-                    <Text style={styles.backButtonText}>Back</Text>
+                    <Text className="text-[14px] font-bold text-offer-deep-green">
+                        Back
+                    </Text>
                 </TouchableOpacity>
             </View>
 
-            <View style={styles.content}>
+            <View className="flex-1 items-center justify-center px-7 pb-[72px]">
                 {isLoading ? (
                     <ActivityIndicator
-                        color={offerColors.primary}
+                        className="mb-[22px] text-offer-primary"
                         size="large"
-                        style={styles.indicator}
                     />
                 ) : null}
-                <Text accessibilityRole="header" style={styles.title}>
+                <Text
+                    accessibilityRole="header"
+                    className="text-center text-[23px] font-extrabold text-offer-deep-green"
+                >
                     {title}
                 </Text>
-                <Text style={styles.description}>{description}</Text>
+                <Text className="mt-[9px] max-w-[420px] text-center text-[15px] leading-[22px] text-offer-muted-text">
+                    {description}
+                </Text>
 
                 {actionLabel && onAction ? (
                     <TouchableOpacity
                         accessibilityRole="button"
                         activeOpacity={0.82}
+                        className="mt-[22px] rounded-pill bg-offer-primary px-6 py-[13px]"
                         onPress={onAction}
-                        style={styles.actionButton}
                     >
-                        <Text style={styles.actionButtonText}>
+                        <Text className="text-[14px] font-extrabold text-offer-card">
                             {actionLabel}
                         </Text>
                     </TouchableOpacity>
@@ -72,65 +75,3 @@ export function OfferDetailState({
         </SafeAreaView>
     );
 }
-
-const styles = StyleSheet.create({
-    actionButton: {
-        backgroundColor: offerColors.primary,
-        borderRadius: 999,
-        marginTop: 22,
-        paddingHorizontal: 24,
-        paddingVertical: 13,
-    },
-    actionButtonText: {
-        color: offerColors.card,
-        fontSize: 14,
-        fontWeight: "800",
-    },
-    backButton: {
-        alignItems: "center",
-        borderColor: offerColors.border,
-        borderRadius: 999,
-        borderWidth: 1,
-        justifyContent: "center",
-        minHeight: 42,
-        paddingHorizontal: 16,
-    },
-    backButtonText: {
-        color: offerColors.deepGreen,
-        fontSize: 14,
-        fontWeight: "700",
-    },
-    content: {
-        alignItems: "center",
-        flex: 1,
-        justifyContent: "center",
-        paddingBottom: 72,
-        paddingHorizontal: 28,
-    },
-    description: {
-        color: offerColors.mutedText,
-        fontSize: 15,
-        lineHeight: 22,
-        marginTop: 9,
-        maxWidth: 420,
-        textAlign: "center",
-    },
-    header: {
-        alignItems: "flex-start",
-        paddingHorizontal: 18,
-        paddingTop: 8,
-    },
-    indicator: {
-        marginBottom: 22,
-    },
-    safeArea: {
-        backgroundColor: offerColors.background,
-        flex: 1,
-    },
-    title: {
-        color: offerColors.deepGreen,
-        fontSize: 23,
-        fontWeight: "800",
-        textAlign: "center",
-    },
-});

@@ -1,6 +1,5 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
-import { offerColors } from "../../theme";
 import type { OfferDetailViewModel } from "../../types/offerDetail.types";
 
 type OfferDetailPriceProps = {
@@ -9,21 +8,25 @@ type OfferDetailPriceProps = {
 
 export function OfferDetailPrice({ offer }: OfferDetailPriceProps) {
     return (
-        <View style={styles.priceSection}>
+        <View className="mt-7 flex-row items-end justify-between rounded-panel border border-offer-border bg-offer-card p-[18px]">
             <View>
-                <Text style={styles.priceLabel}>Original price</Text>
-                <Text style={styles.originalPrice}>
+                <Text className="mb-[5px] text-[11px] font-bold uppercase text-offer-muted-text">
+                    Original price
+                </Text>
+                <Text className="text-[15px] text-offer-detail-old-price line-through">
                     {offer.originalPriceLabel}
                 </Text>
             </View>
 
-            <View style={styles.currentPriceContainer}>
-                <Text style={styles.priceLabel}>Today&apos;s price</Text>
-                <Text style={styles.discountedPrice}>
+            <View className="items-end">
+                <Text className="mb-[5px] text-[11px] font-bold uppercase text-offer-muted-text">
+                    Today&apos;s price
+                </Text>
+                <Text className="text-[27px] font-black text-offer-deep-green">
                     {offer.discountedPriceLabel}
                 </Text>
                 {offer.savingsLabel ? (
-                    <Text style={styles.savingsLabel}>
+                    <Text className="text-xs font-extrabold text-offer-primary">
                         {offer.savingsLabel}
                     </Text>
                 ) : null}
@@ -31,42 +34,3 @@ export function OfferDetailPrice({ offer }: OfferDetailPriceProps) {
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    currentPriceContainer: {
-        alignItems: "flex-end",
-    },
-    discountedPrice: {
-        color: offerColors.deepGreen,
-        fontSize: 27,
-        fontWeight: "900",
-    },
-    originalPrice: {
-        color: "#99A396",
-        fontSize: 15,
-        textDecorationLine: "line-through",
-    },
-    priceLabel: {
-        color: offerColors.mutedText,
-        fontSize: 11,
-        fontWeight: "700",
-        marginBottom: 5,
-        textTransform: "uppercase",
-    },
-    priceSection: {
-        alignItems: "flex-end",
-        backgroundColor: offerColors.card,
-        borderColor: offerColors.border,
-        borderRadius: 20,
-        borderWidth: 1,
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginTop: 28,
-        padding: 18,
-    },
-    savingsLabel: {
-        color: offerColors.primary,
-        fontSize: 12,
-        fontWeight: "800",
-    },
-});

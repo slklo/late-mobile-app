@@ -8,6 +8,8 @@ module.exports = {
     extend: {
       borderRadius: designTokens.borderRadius,
       colors: designTokens.colors,
+      boxShadow: designTokens.boxShadow,
+      elevation: designTokens.elevation,
       fontSize: designTokens.fontSize,
       spacing: designTokens.spacing,
     },

@@ -6,4 +6,5 @@ const config = getDefaultConfig(__dirname);
 module.exports = withNativeWind(config, {
   input: "./styles/global.css",
   configPath: "./config/tailwind.config.js",
+  inlineRem: 16,
 });

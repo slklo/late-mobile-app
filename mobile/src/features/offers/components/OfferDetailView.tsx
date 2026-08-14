@@ -1,12 +1,8 @@
 import { StatusBar } from "expo-status-bar";
-import {
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    View,
-} from "react-native";
+import { ScrollView, View } from "react-native";
 
-import { offerColors } from "../theme";
+import { NativeWindRefreshControl } from "@/shared/ui/nativewindInterop";
+
 import type { OfferDetailViewModel } from "../types/offerDetail.types";
 import { OfferDetailHeader } from "./detail/OfferDetailHeader";
 import { OfferDetailHero } from "./detail/OfferDetailHero";
@@ -28,22 +24,22 @@ export function OfferDetailView({
     onRefresh,
 }: OfferDetailViewProps) {
     return (
-        <View style={styles.screen}>
+        <View className="flex-1 bg-offer-background">
             <StatusBar style="light" />
             <ScrollView
-                contentContainerStyle={styles.scrollContent}
+                contentContainerClassName="pb-[42px]"
                 refreshControl={(
-                    <RefreshControl
+                    <NativeWindRefreshControl
+                        className="text-offer-primary"
                         onRefresh={onRefresh}
                         refreshing={isRefetching}
-                        tintColor={offerColors.primary}
                     />
                 )}
                 showsVerticalScrollIndicator={false}
             >
                 <OfferDetailHero offer={offer} onBack={onBack} />
 
-                <View style={styles.contentCard}>
+                <View className="relative -mt-7 rounded-t-detail-shell bg-offer-background px-5 pt-[26px]">
                     <OfferDetailHeader offer={offer} />
                     <OfferDetailInfo offer={offer} />
                     <OfferDetailPickup offer={offer} />
@@ -53,22 +49,3 @@ export function OfferDetailView({
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    contentCard: {
-        backgroundColor: offerColors.background,
-        borderTopLeftRadius: 28,
-        borderTopRightRadius: 28,
-        marginTop: -28,
-        paddingHorizontal: 20,
-        paddingTop: 26,
-        position: "relative",
-    },
-    screen: {
-        backgroundColor: offerColors.background,
-        flex: 1,
-    },
-    scrollContent: {
-        paddingBottom: 42,
-    },
-});
