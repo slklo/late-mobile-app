@@ -1,12 +1,9 @@
 import {
     FlatList,
-    StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from "react-native";
-
-import { offerColors } from "../theme";
 
 type ExploreCategoryChipsProps = {
     categories: string[];
@@ -15,7 +12,7 @@ type ExploreCategoryChipsProps = {
 };
 
 function ChipSeparator() {
-    return <View style={styles.separator} />;
+    return <View className="w-chip-gap" />;
 }
 
 export function ExploreCategoryChips({
@@ -25,7 +22,7 @@ export function ExploreCategoryChips({
 }: ExploreCategoryChipsProps) {
     return (
         <FlatList
-            contentContainerStyle={styles.content}
+            contentContainerClassName="px-content-gutter"
             data={categories}
             horizontal
             ItemSeparatorComponent={ChipSeparator}
@@ -38,18 +35,20 @@ export function ExploreCategoryChips({
                         accessibilityRole="button"
                         accessibilityState={{ selected: isSelected }}
                         activeOpacity={0.82}
+                        className={`rounded-pill border px-chip-x py-chip-y ${
+                            isSelected
+                                ? "border-offer-deep-green bg-offer-deep-green"
+                                : "border-offer-border bg-offer-card"
+                        }`}
                         onPress={() => onSelect(category)}
-                        style={[
-                            styles.chip,
-                            isSelected && styles.selectedChip,
-                        ]}
                     >
                         <Text
+                            className={`text-chip-label font-bold ${
+                                isSelected
+                                    ? "text-offer-card"
+                                    : "text-offer-primary"
+                            }`}
                             numberOfLines={1}
-                            style={[
-                                styles.label,
-                                isSelected && styles.selectedLabel,
-                            ]}
                         >
                             {category}
                         </Text>
@@ -60,32 +59,3 @@ export function ExploreCategoryChips({
         />
     );
 }
-
-const styles = StyleSheet.create({
-    chip: {
-        backgroundColor: offerColors.card,
-        borderColor: offerColors.border,
-        borderRadius: 999,
-        borderWidth: 1,
-        paddingHorizontal: 15,
-        paddingVertical: 9,
-    },
-    content: {
-        paddingHorizontal: 16,
-    },
-    label: {
-        color: offerColors.primary,
-        fontSize: 13,
-        fontWeight: "700",
-    },
-    selectedChip: {
-        backgroundColor: offerColors.deepGreen,
-        borderColor: offerColors.deepGreen,
-    },
-    selectedLabel: {
-        color: offerColors.card,
-    },
-    separator: {
-        width: 9,
-    },
-});

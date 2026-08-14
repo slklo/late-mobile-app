@@ -1,18 +1,22 @@
+import designTokens from "../../../config/design-tokens.json";
+
+const auth = designTokens.colors.auth;
+
 export const authColors = {
-    background: "#F7F3EC",
-    card: "#FFFFFF",
-    green: "#2D5A27",
-    greenDark: "#1F3F1C",
-    greenLight: "#E8F0E5",
-    text: "#1F2A24",
-    muted: "#737A74",
-    placeholder: "#A8AAA6",
-    accent: "#E8923A",
-    success: "#DFF3E4",
-    successText: "#1A5C2A",
-    error: "#FEF2F2",
-    errorText: "#B42318",
-    errorBorder: "#FECACA",
-    border: "#E8E4DC",
-    overlay: "rgba(0, 0, 0, 0.38)",
+    background: auth.background,
+    card: auth.card,
+    green: auth.green,
+    greenDark: auth["green-dark"],
+    greenLight: auth["green-light"],
+    text: auth.text,
+    muted: auth.muted,
+    placeholder: auth.placeholder,
+    accent: auth.accent,
+    success: auth.success,
+    successText: auth["success-text"],
+    error: auth.error,
+    errorText: auth["error-text"],
+    errorBorder: auth["error-border"],
+    border: auth.border,
+    overlay: auth.overlay,
 } as const;

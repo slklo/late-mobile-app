@@ -1,0 +1,63 @@
+{
+  "colors": {
+    "auth": {
+      "background": "#F7F3EC",
+      "card": "#FFFFFF",
+      "green": "#2D5A27",
+      "green-dark": "#1F3F1C",
+      "green-light": "#E8F0E5",
+      "text": "#1F2A24",
+      "muted": "#737A74",
+      "placeholder": "#A8AAA6",
+      "accent": "#E8923A",
+      "success": "#DFF3E4",
+      "success-text": "#1A5C2A",
+      "error": "#FEF2F2",
+      "error-text": "#B42318",
+      "error-border": "#FECACA",
+      "border": "#E8E4DC",
+      "overlay": "rgba(0, 0, 0, 0.38)"
+    },
+    "offer": {
+      "background": "#F5F0E8",
+      "border": "#E8E3D7",
+      "card": "#FDFAF4",
+      "deep-green": "#1C3B22",
+      "discount": "rgba(28, 59, 34, 0.82)",
+      "expired": "rgba(76, 82, 75, 0.82)",
+      "muted-text": "#7A8C6E",
+      "primary": "#2A4E18",
+      "secondary": "#EDE8DC",
+      "sold-out": "rgba(76, 82, 75, 0.82)",
+      "urgent": "#E07A5F"
+    },
+    "content": {
+      "primary": "#1C2B1A",
+      "secondary": "#53604E"
+    }
+  },
+  "spacing": {
+    "content-gutter": "16px",
+    "section": "28px",
+    "section-title": "10px",
+    "chip-x": "15px",
+    "chip-y": "9px",
+    "chip-gap": "9px"
+  },
+  "fontSize": {
+    "detail-body": [
+      "15px",
+      {
+        "lineHeight": "23px"
+      }
+    ],
+    "section-title": "19px",
+    "chip-label": "13px"
+  },
+  "borderRadius": {
+    "control": "16px",
+    "panel": "20px",
+    "card": "22px",
+    "pill": "999px"
+  }
+}
