@@ -8,9 +8,7 @@ import {
     useState,
 } from "react";
 import {
-    RefreshControl,
     ScrollView,
-    StyleSheet,
     Text,
     TouchableOpacity,
     View,
@@ -23,7 +21,6 @@ import { ExploreCategoryChips } from "@/features/offers/components/ExploreCatego
 import { OfferSection } from "@/features/offers/components/OfferSection";
 import { useOffersQuery } from "@/features/offers/hooks/useOffersQuery";
 import { mapOffersToCardViewModels } from "@/features/offers/mappers/offerCard.mapper";
-import { offerColors } from "@/features/offers/theme";
 import type { OfferCardViewModel } from "@/features/offers/types/offerCard.types";
 import {
     ALL_CATEGORIES,
@@ -31,6 +28,7 @@ import {
     getExploreCategories,
     splitOffersForExplore,
 } from "@/features/offers/utils/exploreOffers";
+import { NativeWindRefreshControl } from "@/shared/ui/nativewindInterop";
 
 function getGreeting(hour: number): string {
     if (hour < 12) {
@@ -96,10 +94,15 @@ export default function ExploreScreen() {
 
     if (isLoading) {
         return (
-            <SafeAreaView edges={["top"]} style={styles.safeArea}>
+            <SafeAreaView
+                className="flex-1 bg-offer-deep-green"
+                edges={["top"]}
+            >
                 <StatusBar style="light" />
-                <View style={styles.stateContainer}>
-                    <Text style={styles.stateText}>Loading offers...</Text>
+                <View className="flex-1 items-center justify-center bg-offer-background px-7">
+                    <Text className="mt-[7px] text-center text-[14px] leading-[21px] text-offer-muted-text">
+                        Loading offers...
+                    </Text>
                 </View>
             </SafeAreaView>
         );
@@ -107,19 +110,26 @@ export default function ExploreScreen() {
 
     if (isError) {
         return (
-            <SafeAreaView edges={["top"]} style={styles.safeArea}>
+            <SafeAreaView
+                className="flex-1 bg-offer-deep-green"
+                edges={["top"]}
+            >
                 <StatusBar style="light" />
-                <View style={styles.stateContainer}>
-                    <Text style={styles.stateTitle}>Offers are unavailable</Text>
-                    <Text style={styles.stateText}>
+                <View className="flex-1 items-center justify-center bg-offer-background px-7">
+                    <Text className="text-center text-xl font-extrabold text-offer-deep-green">
+                        Offers are unavailable
+                    </Text>
+                    <Text className="mt-[7px] text-center text-[14px] leading-[21px] text-offer-muted-text">
                         Please check your connection and try again.
                     </Text>
                     <TouchableOpacity
                         activeOpacity={0.82}
+                        className="mt-[18px] rounded-pill bg-offer-primary px-5 py-[11px]"
                         onPress={() => void refetch()}
-                        style={styles.retryButton}
                     >
-                        <Text style={styles.retryButtonText}>Try again</Text>
+                        <Text className="text-[14px] font-bold text-offer-card">
+                            Try again
+                        </Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
@@ -127,26 +137,29 @@ export default function ExploreScreen() {
     }
 
     return (
-        <SafeAreaView edges={["top"]} style={styles.safeArea}>
+        <SafeAreaView
+            className="flex-1 bg-offer-deep-green"
+            edges={["top"]}
+        >
             <StatusBar style="light" />
             <ScrollView
-                contentContainerStyle={styles.scrollContent}
+                className="flex-1 bg-offer-background"
+                contentContainerClassName="pb-10"
                 refreshControl={(
-                    <RefreshControl
+                    <NativeWindRefreshControl
+                        className="text-offer-primary"
                         onRefresh={refetch}
                         refreshing={isRefetching}
-                        tintColor={offerColors.primary}
                     />
                 )}
                 showsVerticalScrollIndicator={false}
-                style={styles.screen}
             >
-                <View style={styles.header}>
-                    <View style={styles.greetingContainer}>
-                        <Text style={styles.greeting}>
+                <View className="flex-row items-center justify-between gap-3.5 rounded-b-detail-shell bg-offer-deep-green px-5 pb-6 pt-[18px]">
+                    <View className="flex-1">
+                        <Text className="text-2xl font-extrabold tracking-[-0.4px] text-offer-card">
                             {greeting}, {firstName} 👋
                         </Text>
-                        <Text style={styles.headerSubtitle}>
+                        <Text className="mt-[5px] text-label text-offer-card/[.72]">
                             Discover today&apos;s rescue offers.
                         </Text>
                     </View>
@@ -154,14 +167,16 @@ export default function ExploreScreen() {
                         accessibilityLabel="Log out"
                         accessibilityRole="button"
                         activeOpacity={0.78}
+                        className="rounded-pill border border-offer-card/[.32] px-[13px] py-2"
                         onPress={logout}
-                        style={styles.logoutButton}
                     >
-                        <Text style={styles.logoutText}>Log out</Text>
+                        <Text className="text-xs font-bold text-offer-card">
+                            Log out
+                        </Text>
                     </TouchableOpacity>
                 </View>
 
-                <View style={styles.categories}>
+                <View className="mt-5">
                     <ExploreCategoryChips
                         categories={categories}
                         onSelect={setSelectedCategory}
@@ -170,7 +185,7 @@ export default function ExploreScreen() {
                 </View>
 
                 {filteredOffers.length > 0 ? (
-                    <View style={styles.sections}>
+                    <View className="mt-7 gap-7">
                         <OfferSection
                             emptyLabel="No recommended offers in this category."
                             onOfferPress={handleOfferPress}
@@ -185,9 +200,11 @@ export default function ExploreScreen() {
                         />
                     </View>
                 ) : (
-                    <View style={styles.emptyContainer}>
-                        <Text style={styles.stateTitle}>No offers found</Text>
-                        <Text style={styles.stateText}>
+                    <View className="items-center px-6 py-14">
+                        <Text className="text-center text-xl font-extrabold text-offer-deep-green">
+                            No offers found
+                        </Text>
+                        <Text className="mt-[7px] text-center text-[14px] leading-[21px] text-offer-muted-text">
                             Try another category or check again later.
                         </Text>
                     </View>
@@ -196,99 +213,3 @@ export default function ExploreScreen() {
         </SafeAreaView>
     );
 }
-
-const styles = StyleSheet.create({
-    categories: {
-        marginTop: 20,
-    },
-    emptyContainer: {
-        alignItems: "center",
-        paddingHorizontal: 24,
-        paddingVertical: 56,
-    },
-    greeting: {
-        color: offerColors.card,
-        fontSize: 24,
-        fontWeight: "800",
-        letterSpacing: -0.4,
-    },
-    greetingContainer: {
-        flex: 1,
-    },
-    header: {
-        alignItems: "center",
-        backgroundColor: offerColors.deepGreen,
-        borderBottomLeftRadius: 28,
-        borderBottomRightRadius: 28,
-        flexDirection: "row",
-        gap: 14,
-        justifyContent: "space-between",
-        paddingBottom: 24,
-        paddingHorizontal: 20,
-        paddingTop: 18,
-    },
-    headerSubtitle: {
-        color: "rgba(253, 250, 244, 0.72)",
-        fontSize: 13,
-        marginTop: 5,
-    },
-    logoutButton: {
-        borderColor: "rgba(253, 250, 244, 0.32)",
-        borderRadius: 999,
-        borderWidth: 1,
-        paddingHorizontal: 13,
-        paddingVertical: 8,
-    },
-    logoutText: {
-        color: offerColors.card,
-        fontSize: 12,
-        fontWeight: "700",
-    },
-    retryButton: {
-        backgroundColor: offerColors.primary,
-        borderRadius: 999,
-        marginTop: 18,
-        paddingHorizontal: 20,
-        paddingVertical: 11,
-    },
-    retryButtonText: {
-        color: offerColors.card,
-        fontSize: 14,
-        fontWeight: "700",
-    },
-    safeArea: {
-        backgroundColor: offerColors.deepGreen,
-        flex: 1,
-    },
-    screen: {
-        backgroundColor: offerColors.background,
-        flex: 1,
-    },
-    scrollContent: {
-        paddingBottom: 40,
-    },
-    sections: {
-        gap: 28,
-        marginTop: 28,
-    },
-    stateContainer: {
-        alignItems: "center",
-        backgroundColor: offerColors.background,
-        flex: 1,
-        justifyContent: "center",
-        paddingHorizontal: 28,
-    },
-    stateText: {
-        color: offerColors.mutedText,
-        fontSize: 14,
-        lineHeight: 21,
-        marginTop: 7,
-        textAlign: "center",
-    },
-    stateTitle: {
-        color: offerColors.deepGreen,
-        fontSize: 20,
-        fontWeight: "800",
-        textAlign: "center",
-    },
-});
