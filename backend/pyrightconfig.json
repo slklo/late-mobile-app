@@ -9,7 +9,7 @@
     ".pytest_cache",
     "**/node_modules",
     "**/.*",
-    "venv",
+    "venv"
   ],
   "extraPaths": [
     "."
@@ -22,4 +22,3 @@
   "reportUnnecessaryTypeIgnoreComment": "warning"
 }
 
-//The exclude list is missing default excludes such as '**/node_modules, **/.*, venv'. Consider adding them to avoid analyzing unnecessary files.

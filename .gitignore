@@ -5,13 +5,12 @@ __pycache__/
 
 venv/
 
-reference/
-not-a-reference/
-reference-offers/
+reference-*/
 
 node_modules/
 
 .agents/
+AGENTS.md
 
 .vscode/
 

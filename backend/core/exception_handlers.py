@@ -34,13 +34,6 @@ def _register_many(
     status_code: int,
 ) -> None:
     async def handler(request: Request, exc: Exception) -> JSONResponse:
-        logger.info(
-            "Business exception handled: %s path=%s status=%s",
-            exc.__class__.__name__,
-            request.url.path,
-            status_code,
-        )
-
         if isinstance(exc, AppError):
             return _error_response(status_code, exc.code, exc.message)
 
