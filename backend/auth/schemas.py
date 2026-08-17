@@ -38,6 +38,28 @@ class ConsumeLinkRequest(AuthRequest):
         pattern=r"^[A-Za-z0-9_-]+$",
     )
 
+class RefreshTokenRequest(AuthRequest):
+    refresh_token: str = Field(
+        min_length=32,
+        max_length=512,
+    )
+
+class RefreshTokenResponse(BaseModel):
+    access_token: str = Field(min_length=1)
+    refresh_token: str = Field(
+        min_length=32,
+        max_length=512,
+    )
+    token_type: Literal["bearer"] = "bearer"
+    access_expires_in_seconds: int = Field(gt=0)
+    refresh_expires_in_seconds: int = Field(gt=0)
+
+class LogoutRequest(AuthRequest):
+    refresh_token: str = Field(
+        min_length=32,
+        max_length=512,
+    )
+
 class CompleteProfileRequest(AuthRequest):
     full_name: str = Field(
         min_length=1,

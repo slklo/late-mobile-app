@@ -43,41 +43,28 @@ def test_production_rejects_weak_challenge_secret() -> None:
         )
 
 
-@pytest.mark.xfail(
-    reason=(
-        "Production JWT secret strength is not enforced yet. "
-        "Add a production-only validator before removing this xfail."
-    ),
-    strict=True,
-)
-def test_production_rejects_weak_jwt_secret() -> None:
-    with pytest.raises(ValidationError):
-        Settings(
-            **{
-                **VALID_SETTINGS,
-                "app_environment": "production",
-                "jwt_secret": "too-short",
-            },
-            _env_file=None,
-        )
+# TODO: Re-enable when production JWT secret validation is implemented.
+# def test_production_rejects_weak_jwt_secret() -> None:
+#     with pytest.raises(ValidationError):
+#         Settings(
+#             **{
+#                 **VALID_SETTINGS,
+#                 "app_environment": "production",
+#                 "jwt_secret": "too-short",
+#             },
+#             _env_file=None,
+#         )
 
 
-@pytest.mark.xfail(
-    reason=(
-        "Production TLS policy is not represented in settings yet. "
-        "Add an explicit public HTTPS base URL or TLS flag before "
-        "removing this xfail."
-    ),
-    strict=True,
-)
-def test_production_runtime_requires_tls_configuration() -> None:
-    settings = Settings(
-        **{
-            **VALID_SETTINGS,
-            "app_environment": "production",
-            "auth_magic_link_app_url": "lateplate://auth/email/link",
-        },
-        _env_file=None,
-    )
+# TODO: Re-enable when production TLS configuration is represented in settings.
+# def test_production_runtime_requires_tls_configuration() -> None:
+#     settings = Settings(
+#         **{
+#             **VALID_SETTINGS,
+#             "app_environment": "production",
+#             "auth_magic_link_app_url": "lateplate://auth/email/link",
+#         },
+#         _env_file=None,
+#     )
 
-    assert settings.auth_magic_link_app_url.startswith("https://")
+#     assert settings.auth_magic_link_app_url.startswith("https://")

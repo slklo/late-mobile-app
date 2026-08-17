@@ -3,12 +3,13 @@ from typing import Annotated
 from urllib.parse import urlencode
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from fastapi.responses import RedirectResponse
 
 from auth.dependencies import (
     get_auth_service,
     get_current_user,
+    get_session_service,
 )
 from auth.schemas import (
     AuthSessionResponse,
@@ -16,8 +17,12 @@ from auth.schemas import (
     ConsumeLinkRequest,
     EmailAuthRequest,
     EmailChallengeResponse,
+    LogoutRequest,
+    RefreshTokenRequest,
+    RefreshTokenResponse,
     VerifyCodeRequest,
 )
+from auth.session_service import SessionService
 from auth.service import AuthService, ChallengeDelivery
 from core.config import settings
 from users.dependencies import get_user_service
@@ -117,6 +122,38 @@ async def consume_email_link(
         challenge_id=payload.challenge_id,
         token=payload.token,
     )
+
+
+@router.post(
+    "/token/refresh",
+    response_model=RefreshTokenResponse,
+)
+def refresh_access_token(
+    payload: RefreshTokenRequest,
+    service: SessionService = Depends(get_session_service),
+) -> RefreshTokenResponse:
+    tokens = service.refresh_session(payload.refresh_token)
+
+    return RefreshTokenResponse(
+        access_token=tokens.access_token,
+        refresh_token=tokens.refresh_token,
+        token_type=tokens.token_type,
+        access_expires_in_seconds=tokens.access_expires_in_seconds,
+        refresh_expires_in_seconds=tokens.refresh_expires_in_seconds,
+    )
+
+
+@router.post(
+    "/logout",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
+def logout(
+    payload: LogoutRequest,
+    service: SessionService = Depends(get_session_service),
+) -> Response:
+    service.revoke_session(payload.refresh_token)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.patch(
