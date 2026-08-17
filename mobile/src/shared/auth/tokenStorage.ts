@@ -1,34 +1,91 @@
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
-const ACCESS_TOKEN_KEY = "access_token";
+const AUTH_SESSION_KEY = "auth_session_v1";
+
+export type StoredAuthSession = {
+    accessToken: string;
+    refreshToken: string;
+    accessExpiresAt: number;
+    refreshExpiresAt: number;
+};
 
 function getWebStorage() {
     return typeof window === "undefined" ? null : window.sessionStorage;
 }
 
-export function getAccessToken(): Promise<string | null> {
-    if (Platform.OS === "web") {
-        return Promise.resolve(getWebStorage()?.getItem(ACCESS_TOKEN_KEY) ?? null);
+function isStoredAuthSession(value: unknown): value is StoredAuthSession {
+    if (typeof value !== "object" || value === null) {
+        return false;
     }
 
-    return SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
+    const candidate = value as Partial<StoredAuthSession>;
+
+    return (
+        typeof candidate.accessToken === "string"
+        && candidate.accessToken.length > 0
+        && typeof candidate.refreshToken === "string"
+        && candidate.refreshToken.length > 0
+        && typeof candidate.accessExpiresAt === "number"
+        && Number.isFinite(candidate.accessExpiresAt)
+        && typeof candidate.refreshExpiresAt === "number"
+        && Number.isFinite(candidate.refreshExpiresAt)
+    );
 }
 
-export function saveAccessToken(token: string): Promise<void> {
+async function readStoredSessionValue(): Promise<string | null> {
     if (Platform.OS === "web") {
-        getWebStorage()?.setItem(ACCESS_TOKEN_KEY, token);
+        return getWebStorage()?.getItem(AUTH_SESSION_KEY) ?? null;
+    }
+
+    return SecureStore.getItemAsync(AUTH_SESSION_KEY);
+}
+
+export async function getStoredAuthSession(): Promise<StoredAuthSession | null> {
+    const storedValue = await readStoredSessionValue();
+
+    if (storedValue === null) {
+        return null;
+    }
+
+    try {
+        const parsed: unknown = JSON.parse(storedValue);
+        return isStoredAuthSession(parsed) ? parsed : null;
+    } catch {
+        return null;
+    }
+}
+
+export function saveAuthSession(session: StoredAuthSession): Promise<void> {
+    const serializedSession = JSON.stringify(session);
+
+    if (Platform.OS === "web") {
+        getWebStorage()?.setItem(AUTH_SESSION_KEY, serializedSession);
         return Promise.resolve();
     }
 
-    return SecureStore.setItemAsync(ACCESS_TOKEN_KEY, token);
+    return SecureStore.setItemAsync(AUTH_SESSION_KEY, serializedSession);
+}
+
+export function removeAuthSession(): Promise<void> {
+    if (Platform.OS === "web") {
+        getWebStorage()?.removeItem(AUTH_SESSION_KEY);
+        return Promise.resolve();
+    }
+
+    return SecureStore.deleteItemAsync(AUTH_SESSION_KEY);
+}
+
+export async function getAccessToken(): Promise<string | null> {
+    const session = await getStoredAuthSession();
+    return session?.accessToken ?? null;
+}
+
+export async function getRefreshToken(): Promise<string | null> {
+    const session = await getStoredAuthSession();
+    return session?.refreshToken ?? null;
 }
 
 export function removeAccessToken(): Promise<void> {
-    if (Platform.OS === "web") {
-        getWebStorage()?.removeItem(ACCESS_TOKEN_KEY);
-        return Promise.resolve();
-    }
-
-    return SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
+    return removeAuthSession();
 }

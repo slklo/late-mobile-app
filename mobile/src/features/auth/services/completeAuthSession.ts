@@ -1,4 +1,7 @@
-import { saveAccessToken } from "@/shared/auth/tokenStorage";
+import {
+    saveAuthSession,
+    type StoredAuthSession,
+} from "@/shared/auth/tokenStorage";
 
 import { useAuthFlowStore } from "../store/authFlowStore";
 import { useAuthStore } from "../store/authStore";
@@ -11,11 +14,28 @@ export class AuthSessionStorageError extends Error {
     }
 }
 
+export function toStoredAuthSession(
+    response: AuthSession,
+): StoredAuthSession {
+    const now = Date.now();
+
+    return {
+        accessToken: response.access_token,
+        refreshToken: response.refresh_token,
+        accessExpiresAt: (
+            now + response.access_expires_in_seconds * 1000
+        ),
+        refreshExpiresAt: (
+            now + response.refresh_expires_in_seconds * 1000
+        ),
+    };
+}
+
 export async function completeAuthSession(
     session: AuthSession,
 ): Promise<void> {
     try {
-        await saveAccessToken(session.access_token);
+        await saveAuthSession(toStoredAuthSession(session));
     } catch {
         throw new AuthSessionStorageError();
     }

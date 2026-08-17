@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 
-import { removeAccessToken } from "@/shared/auth/tokenStorage";
+import { removeAuthSession } from "@/shared/auth/tokenStorage";
 import { useAuthFlowStore } from "../store/authFlowStore";
 import { useAuthStore } from "../store/authStore";
 
@@ -10,7 +10,7 @@ export function useLogout() {
     const resetAuthFlow = useAuthFlowStore((state) => state.reset);
 
     return async function logout() {
-        await removeAccessToken();
+        await removeAuthSession();
         resetAuthFlow();
         clearUser();
         queryClient.clear();

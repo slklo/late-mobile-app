@@ -6,6 +6,7 @@ import type {
     CurrentUser,
     EmailAuthInput,
     EmailChallenge,
+    RefreshAuthSessionResponse,
     VerifyCodeInput,
 } from "../types/auth.types";
 
@@ -37,6 +38,25 @@ export async function consumeEmailLink(
         input,
     );
     return response.data;
+}
+
+export async function refreshAuthSession(
+    refreshToken: string,
+): Promise<RefreshAuthSessionResponse> {
+    const response = await apiClient.post<RefreshAuthSessionResponse>(
+        "/auth/token/refresh",
+        { refresh_token: refreshToken },
+    );
+    return response.data;
+}
+
+export async function logoutAuthSession(
+    refreshToken: string,
+): Promise<void> {
+    await apiClient.post(
+        "/auth/logout",
+        { refresh_token: refreshToken },
+    );
 }
 
 export async function getCurrentUser(): Promise<CurrentUser> {
