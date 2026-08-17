@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Iterator
 
 import pytest
@@ -142,6 +143,24 @@ def test_refresh_database_failure_uses_neutral_503_contract(
         }
     }
     assert OLD_REFRESH_TOKEN not in response.text
+
+
+def test_refresh_failure_does_not_log_token(
+    client: TestClient,
+    session_service: StubSessionService,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    session_service.refresh_error = InvalidRefreshTokenError()
+
+    with caplog.at_level(logging.DEBUG):
+        response = client.post(
+            "/api/auth/token/refresh",
+            json={"refresh_token": OLD_REFRESH_TOKEN},
+        )
+
+    assert response.status_code == 401
+    assert OLD_REFRESH_TOKEN not in response.text
+    assert OLD_REFRESH_TOKEN not in caplog.text
 
 
 @pytest.mark.parametrize(

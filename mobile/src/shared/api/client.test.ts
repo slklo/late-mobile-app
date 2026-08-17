@@ -32,12 +32,20 @@ vi.mock("expo-secure-store", () => secureStore);
 vi.mock("react-native", () => ({
     Platform: { OS: "ios" },
 }));
+vi.mock("@/shared/auth/tokenStorage", async () => (
+    import("../auth/tokenStorage")
+));
+vi.mock("@/shared/api/client", async () => import("./client"));
 
 import {
     apiClient,
     authSessionClient,
+    requestAuthLogout,
     setUnauthorizedHandler,
 } from "./client";
+import { initializeAuth } from "../../features/auth/hooks/useAuthBootstrap";
+import { useAuthStore } from "../../features/auth/store/authStore";
+import type { CurrentUser } from "../../features/auth/types/auth.types";
 import {
     getStoredAuthSession,
     saveAuthSession,
@@ -59,6 +67,16 @@ const REFRESH_RESPONSE: AuthTokenPairResponse = {
     token_type: "bearer",
     access_expires_in_seconds: 900,
     refresh_expires_in_seconds: 2_592_000,
+};
+
+const CURRENT_USER: CurrentUser = {
+    id: 42,
+    email: "refresh-user@example.com",
+    full_name: "Refresh User",
+    is_active: true,
+    created_at: "2026-08-17T12:00:00Z",
+    email_verified_at: "2026-08-17T12:00:00Z",
+    profile_completed_at: "2026-08-17T12:05:00Z",
 };
 
 let removeUnauthorizedHandler: (() => void) | undefined;
@@ -104,6 +122,10 @@ beforeEach(async () => {
     vi.clearAllMocks();
     secureStore.values.clear();
     await saveAuthSession(OLD_SESSION);
+    useAuthStore.setState({
+        user: null,
+        isInitialized: false,
+    });
 
     unauthorizedHandler = vi.fn<() => void>();
     removeUnauthorizedHandler = setUnauthorizedHandler(
@@ -154,7 +176,7 @@ describe("apiClient automatic refresh", () => {
         expect(unauthorizedHandler).not.toHaveBeenCalled();
     });
 
-    it("shares one refresh across parallel 401 responses", async () => {
+    it("shares one refresh across five parallel 401 responses", async () => {
         let apiCalls = 0;
         let refreshCalls = 0;
         let releaseRefresh: (() => void) | undefined;
@@ -177,15 +199,17 @@ describe("apiClient automatic refresh", () => {
             return response(config, 200, REFRESH_RESPONSE);
         };
 
-        const firstRequest = apiClient.get("/offers/1");
-        const secondRequest = apiClient.get("/offers/2");
+        const requests = Array.from(
+            { length: 5 },
+            (_, index) => apiClient.get(`/offers/${index + 1}`),
+        );
 
         await vi.waitFor(() => expect(refreshCalls).toBe(1));
         releaseRefresh?.();
-        await Promise.all([firstRequest, secondRequest]);
+        await Promise.all(requests);
 
         expect(refreshCalls).toBe(1);
-        expect(apiCalls).toBe(4);
+        expect(apiCalls).toBe(10);
         expect(unauthorizedHandler).not.toHaveBeenCalled();
     });
 
@@ -227,6 +251,35 @@ describe("apiClient automatic refresh", () => {
 
         await expect(apiClient.get("/offers")).rejects.toMatchObject({
             response: { status: 503 },
+        });
+
+        await expect(getStoredAuthSession()).resolves.toEqual(OLD_SESSION);
+        expect(unauthorizedHandler).not.toHaveBeenCalled();
+    });
+
+    it("keeps the session when refresh fails without a response", async () => {
+        apiClient.defaults.adapter = async (config) => {
+            rejectWithStatus(config, 401);
+        };
+        authSessionClient.defaults.adapter = async (config) => {
+            throw new AxiosError(
+                "Network Error",
+                AxiosError.ERR_NETWORK,
+                config,
+            );
+        };
+
+        const request = apiClient.get("/offers");
+
+        await expect(request).rejects.toMatchObject({
+            code: AxiosError.ERR_NETWORK,
+        });
+        await request.catch((error: unknown) => {
+            expect(axios.isAxiosError(error)).toBe(true);
+
+            if (axios.isAxiosError(error)) {
+                expect(error.response).toBeUndefined();
+            }
         });
 
         await expect(getStoredAuthSession()).resolves.toEqual(OLD_SESSION);
@@ -276,5 +329,51 @@ describe("apiClient automatic refresh", () => {
         expect(refreshTransportCalls).toBe(0);
         await expect(getStoredAuthSession()).resolves.toBeNull();
         expect(unauthorizedHandler).toHaveBeenCalledTimes(1);
+    });
+
+    it("refreshes /auth/me during bootstrap and sets the user", async () => {
+        let currentUserCalls = 0;
+        let refreshCalls = 0;
+
+        apiClient.defaults.adapter = async (config) => {
+            currentUserCalls += 1;
+            expect(config.url).toBe("/auth/me");
+
+            if (currentUserCalls === 1) {
+                rejectWithStatus(config, 401);
+            }
+
+            expect(authorization(config)).toBe("Bearer new-access-token");
+            return response(config, 200, CURRENT_USER);
+        };
+        authSessionClient.defaults.adapter = async (config) => {
+            refreshCalls += 1;
+            return response(config, 200, REFRESH_RESPONSE);
+        };
+
+        await initializeAuth();
+
+        expect(currentUserCalls).toBe(2);
+        expect(refreshCalls).toBe(1);
+        expect(useAuthStore.getState().user).toEqual(CURRENT_USER);
+        expect(useAuthStore.getState().isInitialized).toBe(true);
+        expect(unauthorizedHandler).not.toHaveBeenCalled();
+    });
+
+    it("sends logout through the interceptor-free session client", async () => {
+        let logoutCalls = 0;
+
+        authSessionClient.defaults.adapter = async (config) => {
+            logoutCalls += 1;
+            expect(config.url).toBe("/auth/logout");
+            expect(JSON.parse(String(config.data))).toEqual({
+                refresh_token: OLD_SESSION.refreshToken,
+            });
+            return response(config, 204, undefined);
+        };
+
+        await requestAuthLogout(OLD_SESSION.refreshToken);
+
+        expect(logoutCalls).toBe(1);
     });
 });

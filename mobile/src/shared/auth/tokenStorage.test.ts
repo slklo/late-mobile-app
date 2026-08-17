@@ -38,6 +38,13 @@ const SESSION: StoredAuthSession = {
     refreshExpiresAt: 1_802_592_000_000,
 };
 
+const ROTATED_SESSION: StoredAuthSession = {
+    accessToken: "rotated-access-token",
+    refreshToken: "rotated-refresh-token",
+    accessExpiresAt: 1_800_000_900_000,
+    refreshExpiresAt: 1_805_184_000_000,
+};
+
 
 beforeEach(() => {
     secureStore.values.clear();
@@ -84,5 +91,18 @@ describe("auth session storage", () => {
             JSON.stringify({ accessToken: "access-token" }),
         );
         await expect(getStoredAuthSession()).resolves.toBeNull();
+    });
+
+    it("keeps the old complete pair when storing a rotation fails", async () => {
+        await saveAuthSession(SESSION);
+        secureStore.setItemAsync.mockRejectedValueOnce(
+            new Error("secure storage unavailable"),
+        );
+
+        await expect(saveAuthSession(ROTATED_SESSION)).rejects.toThrow(
+            "secure storage unavailable",
+        );
+
+        await expect(getStoredAuthSession()).resolves.toEqual(SESSION);
     });
 });

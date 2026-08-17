@@ -5,9 +5,13 @@ from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import create_engine
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
-from auth.exceptions import InvalidRefreshTokenError
+from auth.exceptions import (
+    AuthenticationServiceUnavailableError,
+    InvalidRefreshTokenError,
+)
 from auth.models import RefreshSession
 from auth.session_repository import RefreshSessionRepository
 from auth.session_service import SessionService, SessionServiceConfig
@@ -155,8 +159,10 @@ def test_reusing_rotated_token_revokes_entire_family(
     issued = service.issue_session(user)
     rotated = service.refresh_session(issued.refresh_token)
 
-    with pytest.raises(InvalidRefreshTokenError):
+    with pytest.raises(InvalidRefreshTokenError) as reused_error:
         service.refresh_session(issued.refresh_token)
+
+    assert issued.refresh_token not in str(reused_error.value)
 
     old_session = refresh_sessions.get_by_token_hash(
         hash_refresh_token(issued.refresh_token),
@@ -171,6 +177,9 @@ def test_reusing_rotated_token_revokes_entire_family(
         )
         is None
     )
+
+    with pytest.raises(InvalidRefreshTokenError):
+        service.refresh_session(rotated.refresh_token)
 
 
 def test_expired_refresh_token_is_rejected(
@@ -255,6 +264,7 @@ def test_inactive_user_is_rejected_and_family_is_revoked(
     )
     assert stored is not None
     assert stored.revoked_at is not None
+    assert len(refresh_sessions.list_by_family_id(stored.family_id)) == 1
 
 
 def test_unknown_refresh_token_is_rejected(
@@ -346,3 +356,40 @@ def test_revoke_family_returns_number_of_newly_revoked_sessions(
 
     assert first_result == 1
     assert second_result == 0
+
+
+def test_refresh_database_failure_is_translated_without_details(
+    session_service: tuple[
+        SessionService,
+        Session,
+        RefreshSessionRepository,
+        User,
+    ],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service, _, refresh_sessions, _ = session_service
+    refresh_token = generate_refresh_token()
+    database_detail = "database host and statement must stay private"
+
+    def fail_lookup(token_hash: str) -> RefreshSession | None:
+        raise OperationalError(
+            "SELECT token_hash FROM auth_refresh_sessions",
+            {},
+            RuntimeError(database_detail),
+        )
+
+    monkeypatch.setattr(
+        refresh_sessions,
+        "get_active_by_token_hash_for_update",
+        fail_lookup,
+    )
+
+    with pytest.raises(
+        AuthenticationServiceUnavailableError,
+    ) as exc_info:
+        service.refresh_session(refresh_token)
+
+    assert exc_info.value.code == "AUTHENTICATION_SERVICE_UNAVAILABLE"
+    assert str(exc_info.value) == "Authentication is temporarily unavailable"
+    assert database_detail not in str(exc_info.value)
+    assert refresh_token not in str(exc_info.value)
