@@ -1,9 +1,14 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, String, func, text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.database import Base
+
+if TYPE_CHECKING:
+    from auth.models import RefreshSession
+
 
 class User(Base):
     __tablename__ = "users"
@@ -52,4 +57,9 @@ class User(Base):
         nullable=True,
     )
 
-    
+    refresh_sessions: Mapped[list["RefreshSession"]] = relationship(
+        "RefreshSession",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
