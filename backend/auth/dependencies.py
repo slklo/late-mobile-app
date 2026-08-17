@@ -9,9 +9,11 @@ from auth.exceptions import (
     AuthenticationServiceUnavailableError,
     AuthenticationTokenError,
 )
+from auth.session_repository import RefreshSessionRepository
 from auth.service import AuthService
 from auth.token_service import decode_access_token
 from users.dependencies import (
+    DbSession,
     UserRepositoryDep,
     UserServiceDep,
 )
@@ -47,6 +49,18 @@ def get_challenge_repository(redis: RedisDep) -> ChallengeRepository:
 ChallengeRepositoryDep = Annotated[
     ChallengeRepository,
     Depends(get_challenge_repository),
+]
+
+
+def get_refresh_session_repository(
+    db: DbSession,
+) -> RefreshSessionRepository:
+    return RefreshSessionRepository(db)
+
+
+RefreshSessionRepositoryDep = Annotated[
+    RefreshSessionRepository,
+    Depends(get_refresh_session_repository),
 ]
 
 
