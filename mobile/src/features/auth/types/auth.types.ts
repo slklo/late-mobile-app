@@ -1,14 +1,11 @@
 import type { components } from "@/shared/api/generated/schema";
+import type {
+    AuthTokenPairResponse as SharedAuthTokenPairResponse,
+} from "@/shared/auth/tokenStorage";
 
 export type CurrentUser = components["schemas"]["UserRead"];
 export type AuthNextStep = components["schemas"]["AuthNextStep"];
-export type AuthTokenPairResponse = {
-    access_token: string;
-    refresh_token: string;
-    token_type: "bearer";
-    access_expires_in_seconds: number;
-    refresh_expires_in_seconds: number;
-};
+export type AuthTokenPairResponse = SharedAuthTokenPairResponse;
 export type AuthSession = AuthTokenPairResponse & {
     user: CurrentUser;
     next_step: AuthNextStep;

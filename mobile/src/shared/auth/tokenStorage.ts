@@ -10,6 +10,31 @@ export type StoredAuthSession = {
     refreshExpiresAt: number;
 };
 
+export type AuthTokenPairResponse = {
+    access_token: string;
+    refresh_token: string;
+    token_type: "bearer";
+    access_expires_in_seconds: number;
+    refresh_expires_in_seconds: number;
+};
+
+export function toStoredAuthSession(
+    response: AuthTokenPairResponse,
+): StoredAuthSession {
+    const now = Date.now();
+
+    return {
+        accessToken: response.access_token,
+        refreshToken: response.refresh_token,
+        accessExpiresAt: (
+            now + response.access_expires_in_seconds * 1000
+        ),
+        refreshExpiresAt: (
+            now + response.refresh_expires_in_seconds * 1000
+        ),
+    };
+}
+
 function getWebStorage() {
     return typeof window === "undefined" ? null : window.sessionStorage;
 }

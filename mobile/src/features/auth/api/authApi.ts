@@ -1,4 +1,9 @@
-import { apiClient } from "@/shared/api/client";
+import {
+    apiClient,
+    refreshStoredAuthSession,
+    requestAuthLogout,
+} from "@/shared/api/client";
+import type { StoredAuthSession } from "@/shared/auth/tokenStorage";
 import type {
     AuthSession,
     CompleteProfileInput,
@@ -6,7 +11,6 @@ import type {
     CurrentUser,
     EmailAuthInput,
     EmailChallenge,
-    RefreshAuthSessionResponse,
     VerifyCodeInput,
 } from "../types/auth.types";
 
@@ -42,21 +46,14 @@ export async function consumeEmailLink(
 
 export async function refreshAuthSession(
     refreshToken: string,
-): Promise<RefreshAuthSessionResponse> {
-    const response = await apiClient.post<RefreshAuthSessionResponse>(
-        "/auth/token/refresh",
-        { refresh_token: refreshToken },
-    );
-    return response.data;
+): Promise<StoredAuthSession> {
+    return refreshStoredAuthSession(refreshToken);
 }
 
 export async function logoutAuthSession(
     refreshToken: string,
 ): Promise<void> {
-    await apiClient.post(
-        "/auth/logout",
-        { refresh_token: refreshToken },
-    );
+    await requestAuthLogout(refreshToken);
 }
 
 export async function getCurrentUser(): Promise<CurrentUser> {
