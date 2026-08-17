@@ -28,3 +28,8 @@ class EmailChallengeRateLimitedError(AppError):
 class InvalidMagicLinkError(AppError):
     code = "INVALID_MAGIC_LINK"
     message = "Invalid or expired magic link"
+
+
+class InvalidRefreshTokenError(AppError):
+    code = "INVALID_REFRESH_TOKEN"
+    message = "Invalid refresh token"

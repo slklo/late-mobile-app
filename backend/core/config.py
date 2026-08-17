@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     jwt_secret: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
+    refresh_token_expire_days: int = Field(default=30, gt=0)
+    refresh_token_bytes: int = Field(default=32, ge=32)
 
     auth_challenge_secret: SecretStr = Field(min_length=32)
     auth_challenge_ttl_seconds: int = Field(default=600, gt=0)

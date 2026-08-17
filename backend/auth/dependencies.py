@@ -10,6 +10,7 @@ from auth.exceptions import (
     AuthenticationTokenError,
 )
 from auth.session_repository import RefreshSessionRepository
+from auth.session_service import SessionService
 from auth.service import AuthService
 from auth.token_service import decode_access_token
 from users.dependencies import (
@@ -61,6 +62,24 @@ def get_refresh_session_repository(
 RefreshSessionRepositoryDep = Annotated[
     RefreshSessionRepository,
     Depends(get_refresh_session_repository),
+]
+
+
+def get_session_service(
+    db: DbSession,
+    refresh_sessions: RefreshSessionRepositoryDep,
+    users: UserRepositoryDep,
+) -> SessionService:
+    return SessionService(
+        db=db,
+        refresh_sessions=refresh_sessions,
+        users=users,
+    )
+
+
+SessionServiceDep = Annotated[
+    SessionService,
+    Depends(get_session_service),
 ]
 
 
