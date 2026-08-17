@@ -12,13 +12,15 @@ from auth.exceptions import (
     InvalidEmailVerificationError,
 )
 from auth.schemas import AuthNextStep, AuthSessionResponse
+from auth.session_service import AuthSessionTokens
 from auth.service import AuthService, AuthServiceConfig
-from auth.token_service import decode_access_token
+from auth.token_service import create_access_token, decode_access_token
 from users.exceptions import EmailAlreadyRegisteredError
 
 
 TEST_CHALLENGE_SECRET = "test-challenge-secret-with-at-least-32-characters"
 VALID_CODE = "123456"
+REFRESH_TOKEN = "otp-refresh-token-" + "r" * 32
 
 
 @dataclass
@@ -126,6 +128,20 @@ class StubChallengeRepository:
             return consumed
 
 
+class StubSessionService:
+    def __init__(self) -> None:
+        self.issued_users: list[StubUser] = []
+
+    def issue_session(self, user: StubUser) -> AuthSessionTokens:
+        self.issued_users.append(user)
+        return AuthSessionTokens(
+            access_token=create_access_token(user.id),
+            refresh_token=REFRESH_TOKEN,
+            access_expires_in_seconds=900,
+            refresh_expires_in_seconds=2_592_000,
+        )
+
+
 def make_challenge(
     *,
     code: str = VALID_CODE,
@@ -154,6 +170,7 @@ def create_service(
     StubUserRepository,
     StubUserService,
     StubChallengeRepository,
+    StubSessionService,
 ]:
     users = StubUserRepository(user)
     user_service = StubUserService(
@@ -161,6 +178,7 @@ def create_service(
         simulate_unique_conflict=simulate_unique_conflict,
     )
     challenges = StubChallengeRepository(challenge)
+    sessions = StubSessionService()
     config = AuthServiceConfig(
         challenge_secret=TEST_CHALLENGE_SECRET,
         challenge_ttl_seconds=600,
@@ -172,9 +190,10 @@ def create_service(
         users=users,  # type: ignore[arg-type]
         user_service=user_service,  # type: ignore[arg-type]
         challenges=challenges,  # type: ignore[arg-type]
+        sessions=sessions,  # type: ignore[arg-type]
         config=config,
     )
-    return service, users, user_service, challenges
+    return service, users, user_service, challenges, sessions
 
 
 def verify(
@@ -187,7 +206,7 @@ def verify(
 
 def test_valid_code_creates_user_and_consumes_challenge() -> None:
     challenge = make_challenge()
-    service, _, user_service, challenges = create_service(challenge)
+    service, _, user_service, challenges, sessions = create_service(challenge)
 
     result = verify(service, challenge.challenge_id, VALID_CODE)
 
@@ -196,11 +215,16 @@ def test_valid_code_creates_user_and_consumes_challenge() -> None:
     assert result.user.email == challenge.email
     assert result.next_step is AuthNextStep.COMPLETE_PROFILE
     assert decode_access_token(result.access_token) == result.user.id
+    assert result.refresh_token == REFRESH_TOKEN
+    assert result.access_expires_in_seconds == 900
+    assert result.refresh_expires_in_seconds == 2_592_000
+    assert len(sessions.issued_users) == 1
+    assert sessions.issued_users[0].id == result.user.id
 
 
 def test_wrong_code_increments_attempt_without_consuming() -> None:
     challenge = make_challenge()
-    service, _, user_service, challenges = create_service(challenge)
+    service, _, user_service, challenges, sessions = create_service(challenge)
 
     with pytest.raises(InvalidEmailVerificationError):
         verify(service, challenge.challenge_id, "654321")
@@ -208,11 +232,12 @@ def test_wrong_code_increments_attempt_without_consuming() -> None:
     assert user_service.create_calls == 0
     assert challenges.challenge is not None
     assert challenges.challenge.attempts == 1
+    assert sessions.issued_users == []
 
 
 def test_last_wrong_attempt_invalidates_challenge() -> None:
     challenge = make_challenge(attempts=4)
-    service, _, user_service, challenges = create_service(challenge)
+    service, _, user_service, challenges, _ = create_service(challenge)
 
     with pytest.raises(EmailVerificationAttemptsExceededError):
         verify(service, challenge.challenge_id, "654321")
@@ -223,7 +248,7 @@ def test_last_wrong_attempt_invalidates_challenge() -> None:
 
 def test_correct_code_is_blocked_after_attempt_limit() -> None:
     challenge = make_challenge(attempts=5)
-    service, _, user_service, challenges = create_service(challenge)
+    service, _, user_service, challenges, _ = create_service(challenge)
 
     with pytest.raises(EmailVerificationAttemptsExceededError):
         verify(service, challenge.challenge_id, VALID_CODE)
@@ -233,7 +258,7 @@ def test_correct_code_is_blocked_after_attempt_limit() -> None:
 
 
 def test_expired_or_missing_challenge_fails() -> None:
-    service, _, user_service, _ = create_service(challenge=None)
+    service, _, user_service, _, _ = create_service(challenge=None)
 
     with pytest.raises(InvalidEmailVerificationError):
         verify(service, uuid4(), VALID_CODE)
@@ -243,7 +268,7 @@ def test_expired_or_missing_challenge_fails() -> None:
 
 def test_magic_link_challenge_cannot_be_used_as_code() -> None:
     challenge = make_challenge(kind=ChallengeKind.EXISTING_USER)
-    service, _, user_service, challenges = create_service(challenge)
+    service, _, user_service, challenges, _ = create_service(challenge)
 
     with pytest.raises(InvalidEmailVerificationError):
         verify(service, challenge.challenge_id, VALID_CODE)
@@ -254,7 +279,7 @@ def test_magic_link_challenge_cannot_be_used_as_code() -> None:
 
 def test_unique_constraint_race_loads_existing_user() -> None:
     challenge = make_challenge()
-    service, users, user_service, _ = create_service(
+    service, users, user_service, _, _ = create_service(
         challenge,
         simulate_unique_conflict=True,
     )
@@ -268,7 +293,7 @@ def test_unique_constraint_race_loads_existing_user() -> None:
 
 def test_parallel_verification_succeeds_only_once() -> None:
     challenge = make_challenge()
-    service, _, user_service, challenges = create_service(challenge)
+    service, _, user_service, challenges, sessions = create_service(challenge)
 
     async def run_parallel():
         return await asyncio.gather(
@@ -294,3 +319,4 @@ def test_parallel_verification_succeeds_only_once() -> None:
     assert len(failures) == 1
     assert user_service.create_calls == 1
     assert challenges.challenge is None
+    assert len(sessions.issued_users) == 1

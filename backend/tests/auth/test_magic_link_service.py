@@ -9,13 +9,15 @@ from auth.challenge_repository import ChallengeKind, ChallengeRecord
 from auth.challenge_secrets import hash_challenge_secret
 from auth.exceptions import InvalidMagicLinkError
 from auth.schemas import AuthNextStep, AuthSessionResponse
+from auth.session_service import AuthSessionTokens
 from auth.service import AuthService, AuthServiceConfig
-from auth.token_service import decode_access_token
+from auth.token_service import create_access_token, decode_access_token
 
 
 TEST_CHALLENGE_SECRET = "test-challenge-secret-with-at-least-32-characters"
 VALID_TOKEN = "a" * 43
 INVALID_TOKEN = "b" * 43
+REFRESH_TOKEN = "magic-link-refresh-token-" + "r" * 32
 
 
 @dataclass
@@ -88,6 +90,20 @@ class StubChallengeRepository:
             return consumed
 
 
+class StubSessionService:
+    def __init__(self) -> None:
+        self.issued_users: list[StubUser] = []
+
+    def issue_session(self, user: StubUser) -> AuthSessionTokens:
+        self.issued_users.append(user)
+        return AuthSessionTokens(
+            access_token=create_access_token(user.id),
+            refresh_token=REFRESH_TOKEN,
+            access_expires_in_seconds=900,
+            refresh_expires_in_seconds=2_592_000,
+        )
+
+
 def make_challenge(
     *,
     token: str = VALID_TOKEN,
@@ -108,15 +124,17 @@ def create_service(
     challenge: ChallengeRecord | None,
     *,
     user: StubUser | None = None,
-) -> tuple[AuthService, StubChallengeRepository]:
+) -> tuple[AuthService, StubChallengeRepository, StubSessionService]:
     if user is None and challenge is not None:
         user = StubUser(id=202, email=challenge.email)
 
     challenges = StubChallengeRepository(challenge)
+    sessions = StubSessionService()
     service = AuthService(
         users=StubUserRepository(user),  # type: ignore[arg-type]
         user_service=UnusedUserService(),  # type: ignore[arg-type]
         challenges=challenges,  # type: ignore[arg-type]
+        sessions=sessions,  # type: ignore[arg-type]
         config=AuthServiceConfig(
             challenge_secret=TEST_CHALLENGE_SECRET,
             challenge_ttl_seconds=600,
@@ -125,7 +143,7 @@ def create_service(
             code_max_attempts=5,
         ),
     )
-    return service, challenges
+    return service, challenges, sessions
 
 
 def consume(
@@ -138,7 +156,7 @@ def consume(
 
 def test_valid_magic_link_returns_session_and_is_consumed() -> None:
     challenge = make_challenge()
-    service, challenges = create_service(challenge)
+    service, challenges, sessions = create_service(challenge)
 
     result = consume(service, challenge.challenge_id, VALID_TOKEN)
 
@@ -146,20 +164,26 @@ def test_valid_magic_link_returns_session_and_is_consumed() -> None:
     assert result.user.email == challenge.email
     assert result.next_step is AuthNextStep.EXPLORE
     assert decode_access_token(result.access_token) == result.user.id
+    assert result.refresh_token == REFRESH_TOKEN
+    assert result.access_expires_in_seconds == 900
+    assert result.refresh_expires_in_seconds == 2_592_000
+    assert len(sessions.issued_users) == 1
+    assert sessions.issued_users[0].id == result.user.id
 
 
 def test_wrong_token_does_not_consume_challenge() -> None:
     challenge = make_challenge()
-    service, challenges = create_service(challenge)
+    service, challenges, sessions = create_service(challenge)
 
     with pytest.raises(InvalidMagicLinkError):
         consume(service, challenge.challenge_id, INVALID_TOKEN)
 
     assert challenges.challenge is challenge
+    assert sessions.issued_users == []
 
 
 def test_expired_or_missing_magic_link_fails() -> None:
-    service, _ = create_service(challenge=None)
+    service, _, _ = create_service(challenge=None)
 
     with pytest.raises(InvalidMagicLinkError):
         consume(service, uuid4(), VALID_TOKEN)
@@ -167,7 +191,7 @@ def test_expired_or_missing_magic_link_fails() -> None:
 
 def test_new_user_code_challenge_cannot_be_consumed_as_magic_link() -> None:
     challenge = make_challenge(kind=ChallengeKind.NEW_USER)
-    service, challenges = create_service(challenge)
+    service, challenges, _ = create_service(challenge)
 
     with pytest.raises(InvalidMagicLinkError):
         consume(service, challenge.challenge_id, VALID_TOKEN)
@@ -177,7 +201,7 @@ def test_new_user_code_challenge_cannot_be_consumed_as_magic_link() -> None:
 
 def test_missing_or_inactive_user_cannot_receive_session() -> None:
     missing_user_challenge = make_challenge()
-    missing_user_service, missing_user_challenges = create_service(
+    missing_user_service, missing_user_challenges, _ = create_service(
         missing_user_challenge,
         user=StubUser(
             id=999,
@@ -195,7 +219,7 @@ def test_missing_or_inactive_user_cannot_receive_session() -> None:
     assert missing_user_challenges.challenge is None
 
     inactive_challenge = make_challenge()
-    inactive_service, inactive_challenges = create_service(
+    inactive_service, inactive_challenges, _ = create_service(
         inactive_challenge,
         user=StubUser(
             id=202,
@@ -216,7 +240,7 @@ def test_missing_or_inactive_user_cannot_receive_session() -> None:
 
 def test_parallel_magic_link_consumption_succeeds_only_once() -> None:
     challenge = make_challenge()
-    service, challenges = create_service(challenge)
+    service, challenges, sessions = create_service(challenge)
 
     async def run_parallel():
         return await asyncio.gather(
@@ -240,3 +264,4 @@ def test_parallel_magic_link_consumption_succeeds_only_once() -> None:
     assert len(successes) == 1
     assert len(failures) == 1
     assert challenges.challenge is None
+    assert len(sessions.issued_users) == 1

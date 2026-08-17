@@ -29,6 +29,7 @@ def test_redis_failure_during_email_request_returns_503() -> None:
         users=NeverCalledUserRepository(),  # type: ignore[arg-type]
         user_service=NeverCalledUserService(),  # type: ignore[arg-type]
         challenges=ChallengeRepository(FailingRedis()),  # type: ignore[arg-type]
+        sessions=object(),  # type: ignore[arg-type]
         config=AuthServiceConfig(
             challenge_secret=(
                 "test-challenge-secret-with-at-least-32-characters"

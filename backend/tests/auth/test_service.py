@@ -81,6 +81,7 @@ def create_service(
         users=users,  # type: ignore[arg-type]
         user_service=StubUserService(users),  # type: ignore[arg-type]
         challenges=challenges,  # type: ignore[arg-type]
+        sessions=object(),  # type: ignore[arg-type]
         config=config,
     )
     return service, users, challenges

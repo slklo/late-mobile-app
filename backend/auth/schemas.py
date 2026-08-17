@@ -74,8 +74,6 @@ class CompleteProfileRequest(AuthRequest):
 
         return value.strip()
 
-class AuthSessionResponse(BaseModel):
-    access_token: str
-    token_type: Literal["bearer"] = "bearer"
+class AuthSessionResponse(RefreshTokenResponse):
     user: UserRead
     next_step: AuthNextStep

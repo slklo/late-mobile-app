@@ -39,6 +39,7 @@ EXISTING_USER_EMAIL = "existing@example.com"
 NEW_USER_CODE = "042731"
 EXISTING_USER_TOKEN = "a" * 43
 INVALID_EXISTING_USER_TOKEN = "b" * 43
+AUTH_REFRESH_TOKEN = "auth-refresh-token-" + "r" * 32
 
 
 class StubAuthService:
@@ -97,6 +98,9 @@ class StubAuthService:
 
         return AuthSessionResponse(
             access_token="test-access-token",
+            refresh_token=AUTH_REFRESH_TOKEN,
+            access_expires_in_seconds=900,
+            refresh_expires_in_seconds=2_592_000,
             user=UserRead(
                 id=101,
                 email=NEW_USER_EMAIL,
@@ -127,6 +131,9 @@ class StubAuthService:
 
         return AuthSessionResponse(
             access_token="test-access-token",
+            refresh_token=AUTH_REFRESH_TOKEN,
+            access_expires_in_seconds=900,
+            refresh_expires_in_seconds=2_592_000,
             user=UserRead(
                 id=202,
                 email=EXISTING_USER_EMAIL,
@@ -342,10 +349,16 @@ def test_verify_code_returns_session_without_verification_code(
     assert auth_service.last_verification == (challenge_id, "123456")
     assert set(response.json()) == {
         "access_token",
+        "refresh_token",
         "token_type",
+        "access_expires_in_seconds",
+        "refresh_expires_in_seconds",
         "user",
         "next_step",
     }
+    assert response.json()["refresh_token"] == AUTH_REFRESH_TOKEN
+    assert response.json()["access_expires_in_seconds"] == 900
+    assert response.json()["refresh_expires_in_seconds"] == 2_592_000
     assert "123456" not in response.text
     assert str(challenge_id) not in response.text
 
@@ -377,6 +390,24 @@ def test_verify_code_maps_business_errors(
 
     assert response.status_code == expected_status
     assert response.json()["error"]["code"] == expected_error
+    assert AUTH_REFRESH_TOKEN not in response.text
+
+
+def test_successful_verification_does_not_log_refresh_token(
+    client: TestClient,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    with caplog.at_level(logging.DEBUG):
+        response = client.post(
+            "/api/auth/email/verify-code",
+            json={
+                "challenge_id": str(uuid4()),
+                "code": "123456",
+            },
+        )
+
+    assert response.status_code == 200
+    assert AUTH_REFRESH_TOKEN not in caplog.text
 
 
 def test_verify_code_rejects_malformed_code(client: TestClient) -> None:
@@ -438,6 +469,16 @@ def test_post_consume_link_returns_existing_user_session(
     )
     assert response.json()["next_step"] == "explore"
     assert response.json()["user"]["email"] == EXISTING_USER_EMAIL
+    assert set(response.json()) == {
+        "access_token",
+        "refresh_token",
+        "token_type",
+        "access_expires_in_seconds",
+        "refresh_expires_in_seconds",
+        "user",
+        "next_step",
+    }
+    assert response.json()["refresh_token"] == AUTH_REFRESH_TOKEN
     assert EXISTING_USER_TOKEN not in response.text
     assert str(challenge_id) not in response.text
 
@@ -455,6 +496,7 @@ def test_post_consume_link_maps_invalid_link_error(
 
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "INVALID_MAGIC_LINK"
+    assert AUTH_REFRESH_TOKEN not in response.text
 
 
 def test_magic_link_endpoints_reject_malformed_token(

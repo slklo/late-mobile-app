@@ -25,7 +25,7 @@ from auth.schemas import (
     AuthSessionResponse,
     EmailChallengeResponse,
 )
-from auth.token_service import create_access_token
+from auth.session_service import SessionService
 from core.config import settings
 from users.exceptions import EmailAlreadyRegisteredError
 from users.models import User
@@ -84,11 +84,13 @@ class AuthService:
         users: UserRepository,
         user_service: UserService,
         challenges: ChallengeRepository,
+        sessions: SessionService,
         config: AuthServiceConfig | None = None,
     ):
         self.users = users
         self.user_service = user_service
         self.challenges = challenges
+        self.sessions = sessions
         self.config = config or AuthServiceConfig.from_settings()
 
     async def request_email_challenge(
@@ -301,10 +303,19 @@ class AuthService:
             and self._secret_matches(token, challenge)
         )
 
-    @staticmethod
-    def _create_session(user: User) -> AuthSessionResponse:
+    def _create_session(self, user: User) -> AuthSessionResponse:
+        tokens = self.sessions.issue_session(user)
+
         return AuthSessionResponse(
-            access_token=create_access_token(user.id),
+            access_token=tokens.access_token,
+            refresh_token=tokens.refresh_token,
+            token_type=tokens.token_type,
+            access_expires_in_seconds=(
+                tokens.access_expires_in_seconds
+            ),
+            refresh_expires_in_seconds=(
+                tokens.refresh_expires_in_seconds
+            ),
             user=UserRead.model_validate(user),
             next_step=(
                 AuthNextStep.COMPLETE_PROFILE

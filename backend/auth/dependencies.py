@@ -87,11 +87,13 @@ def get_auth_service(
     users: UserRepositoryDep,
     user_service: UserServiceDep,
     challenges: ChallengeRepositoryDep,
+    sessions: SessionServiceDep,
 ) -> AuthService:
     return AuthService(
         users=users,
         user_service=user_service,
         challenges=challenges,
+        sessions=sessions,
     )
 
 

@@ -21,17 +21,20 @@ def test_auth_service_receives_prebuilt_dependencies() -> None:
     users = object()
     user_service = object()
     challenges = object()
+    sessions = object()
 
     service = get_auth_service(
         users=users,  # type: ignore[arg-type]
         user_service=user_service,  # type: ignore[arg-type]
         challenges=challenges,  # type: ignore[arg-type]
+        sessions=sessions,  # type: ignore[arg-type]
     )
 
     assert isinstance(service, AuthService)
     assert service.users is users
     assert service.user_service is user_service
     assert service.challenges is challenges
+    assert service.sessions is sessions
 
 
 def test_session_service_receives_prebuilt_dependencies() -> None:
