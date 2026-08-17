@@ -1,11 +1,15 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Literal
+from typing import Literal, NoReturn
 from uuid import UUID, uuid4
 
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
-from auth.exceptions import InvalidRefreshTokenError
+from auth.exceptions import (
+    AuthenticationServiceUnavailableError,
+    InvalidRefreshTokenError,
+)
 from auth.models import RefreshSession
 from auth.session_repository import RefreshSessionRepository
 from auth.token_service import (
@@ -91,6 +95,8 @@ class SessionService:
             self.db.flush()
             tokens = self._build_tokens(user.id, refresh_token)
             self.db.commit()
+        except OperationalError as exc:
+            self._raise_service_unavailable(exc)
         except Exception:
             self.db.rollback()
             raise
@@ -152,6 +158,8 @@ class SessionService:
 
             self.db.flush()
             self.db.commit()
+        except OperationalError as exc:
+            self._raise_service_unavailable(exc)
         except Exception:
             self.db.rollback()
             raise
@@ -182,6 +190,8 @@ class SessionService:
                 )
 
             self.db.commit()
+        except OperationalError as exc:
+            self._raise_service_unavailable(exc)
         except Exception:
             self.db.rollback()
             raise
@@ -193,6 +203,8 @@ class SessionService:
                 datetime.now(timezone.utc),
             )
             self.db.commit()
+        except OperationalError as exc:
+            self._raise_service_unavailable(exc)
         except Exception:
             self.db.rollback()
             raise
@@ -260,3 +272,14 @@ class SessionService:
             expires_at = expires_at.replace(tzinfo=timezone.utc)
 
         return expires_at <= now
+
+    def _raise_service_unavailable(
+        self,
+        error: OperationalError,
+    ) -> NoReturn:
+        try:
+            self.db.rollback()
+        except OperationalError:
+            pass
+
+        raise AuthenticationServiceUnavailableError() from error

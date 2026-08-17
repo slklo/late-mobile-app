@@ -56,6 +56,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         EmailVerificationAttemptsExceededError,
         InvalidEmailVerificationError,
         InvalidMagicLinkError,
+        InvalidRefreshTokenError,
     )
     from users.exceptions import (
         EmailAlreadyRegisteredError,
@@ -79,7 +80,10 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     _register_many(
         app,
-        (AuthenticationTokenError,),
+        (
+            AuthenticationTokenError,
+            InvalidRefreshTokenError,
+        ),
         status.HTTP_401_UNAUTHORIZED,
     )
 
