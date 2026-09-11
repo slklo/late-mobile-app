@@ -1,0 +1,187 @@
+# LatePlate
+
+LatePlate ist ein Full-Stack-Prototyp für zeitlich begrenzte, vergünstigte
+Restaurantangebote. Die Expo-App unterstützt aktuell eine passwortlose
+Anmeldung, Profil-Onboarding, eine Angebotsübersicht und vollständige
+Angebotsdetails. Das FastAPI-Backend verwaltet Nutzer, Angebote,
+Login-Challenges sowie rotierende Access- und Refresh Tokens.
+
+Reservierungen, Bestellungen, Zahlungen und persistente Favoriten sind noch
+nicht implementiert. Eine ausführliche Bestandsaufnahme mit Architektur,
+Risiken, Testabdeckung und Roadmap steht in [PROJECT_STATUS.md](PROJECT_STATUS.md).
+
+## Aktueller Funktionsumfang
+
+Implementiert:
+
+- passwortlose Anmeldung mit Einmalcode oder Magic Link
+- JWT Access Tokens und rotierende Refresh Tokens
+- automatische Session-Erneuerung im Mobile Client
+- Profilvervollständigung und geschützte Navigation
+- öffentliche Angebotsliste mit lokaler Kategoriefilterung
+- eigenständige, scrollbare Angebotsdetailseite
+- PostgreSQL-Migrationen mit Alembic
+- Redis-basierte, atomare Login-Challenges
+
+Teilweise oder nur für Entwicklung verfügbar:
+
+- Codes und Magic Links werden erzeugt, aber noch nicht über einen produktiven
+  E-Mail-Provider versendet
+- Favoriten existieren nur als lokaler UI-State
+- Bezeichnungen wie „Recommended“, „In your area“ und „Nearby“ basieren noch
+  nicht auf Ranking- oder Standortdaten
+
+## Technologie
+
+| Bereich | Technologien |
+| --- | --- |
+| Mobile | Expo 54, React Native, Expo Router, TypeScript, Axios, TanStack Query, Zustand, NativeWind, Vitest |
+| Backend | FastAPI, Pydantic, SQLAlchemy 2.x, Alembic, pytest |
+| Infrastruktur | PostgreSQL 17, Redis 7.4, Docker Compose |
+
+## Voraussetzungen
+
+- Docker Desktop mit Docker Compose
+- Node.js und npm
+- für die native App: Expo Go oder ein Android-/iOS-Simulator
+- für Tests auf einem echten Gerät: Rechner und Gerät im selben Netzwerk
+
+## Lokale Einrichtung
+
+### 1. Backend konfigurieren
+
+Im Repository-Stamm eine lokale `.env` anlegen:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Alle leeren Werte müssen ausgefüllt werden. Besonders wichtig sind:
+
+| Variable | Zweck |
+| --- | --- |
+| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | lokale PostgreSQL-Datenbank |
+| `DATABASE_URL` | SQLAlchemy-Verbindung; im Docker-Netz ist der Host `db` |
+| `REDIS_URL` | Redis-Verbindung; im Docker-Netz ist der Host `redis` |
+| `JWT_SECRET` | geheime Signatur des Access Tokens |
+| `AUTH_CHALLENGE_SECRET` | geheimer HMAC-Schlüssel für Login-Challenges, mindestens 32 Zeichen |
+| `APP_ENVIRONMENT` | `development`, `test` oder `production` |
+
+Secrets gehören ausschließlich in `.env` und dürfen nicht committed werden.
+
+### 2. Backend und Infrastruktur starten
+
+```powershell
+docker compose up --build -d
+docker compose exec backend alembic upgrade head
+docker compose ps
+```
+
+Danach sind verfügbar:
+
+- API: `http://localhost:8000`
+- OpenAPI UI: `http://localhost:8000/docs`
+- Health Check: `http://localhost:8000/health`
+
+Bei `APP_ENVIRONMENT=development` schreibt das Backend erzeugte Login-Codes
+und Magic Links in das Backend-Log. Das dient nur der lokalen Entwicklung:
+
+```powershell
+docker compose logs -f backend
+```
+
+### 3. Mobile App konfigurieren und starten
+
+```powershell
+cd mobile
+npm install
+Copy-Item .env.example .env
+npm start
+```
+
+`EXPO_PUBLIC_API_BASE_URL` muss auf die API einschließlich `/api` zeigen:
+
+- Web oder Emulator mit Hostzugriff: `http://localhost:8000/api`
+- echtes Gerät: `http://<LAN-IP-DES-RECHNERS>:8000/api`
+
+`EXPO_PUBLIC_*`-Variablen sind öffentlich sichtbar und dürfen keine Secrets
+enthalten.
+
+Alternativ stehen folgende Startskripte zur Verfügung:
+
+```powershell
+npm run android
+npm run ios
+npm run web
+```
+
+## Tests und Qualitätsprüfungen
+
+Backend-Testlauf im gestarteten Docker-Container:
+
+```powershell
+docker compose exec backend pytest
+```
+
+Redis-Integrationstests werden bewusst separat ausgeführt:
+
+```powershell
+docker compose exec backend pytest -m redis_integration
+```
+
+Mobile-Prüfungen aus `mobile/`:
+
+```powershell
+npm test
+npm exec tsc -- --noEmit
+```
+
+Ein Lint-Skript ist vorhanden:
+
+```powershell
+npm run lint
+```
+
+Im aktuellen Repository fehlt jedoch noch eine eingecheckte ESLint-Konfiguration.
+Expo versucht sie beim ersten Aufruf interaktiv beziehungsweise mit Zugriff auf
+die Paket-Registry einzurichten. Der Lint-Lauf ist daher noch nicht vollständig
+reproduzierbar vorbereitet.
+
+## OpenAPI-Typen aktualisieren
+
+Das OpenAPI-Schema des Backends ist die Source of Truth für den Mobile-API-
+Vertrag. Bei einer API-Vertragsänderung und laufendem Backend:
+
+```powershell
+cd mobile
+npm run generate:api
+```
+
+Die generierte Datei unter `mobile/src/shared/api/generated/` darf nicht
+manuell bearbeitet werden.
+
+## Repository-Struktur
+
+```text
+backend/                 FastAPI-Anwendung, Domainmodule und Tests
+  auth/                  Passwordless Auth und Refresh Sessions
+  core/                  Konfiguration, Datenbank und Fehlerbehandlung
+  migrations/            Alembic-Konfiguration und Migrationen
+  offers/                Angebots-API und Geschäftslogik
+  users/                 Nutzerverwaltung
+mobile/                  Expo-/React-Native-App
+  src/app/               Expo-Router-Seiten und Layouts
+  src/features/          Auth- und Offer-Funktionalität
+  src/shared/            API Client, Storage und gemeinsame Hilfen
+docker-compose.yml       Backend, PostgreSQL und Redis
+PROJECT_STATUS.md        Architektur-, Risiko- und Roadmap-Bericht
+```
+
+## Wichtige Entwicklungsregeln
+
+- Neue Datenbankänderungen erhalten eine neue Alembic-Migration.
+- Neue SQLAlchemy-Modelmodule werden explizit in
+  `backend/core/model_registry.py` registriert.
+- Backend-Geschäftslogik bleibt in Services und Repositories, nicht in Routes.
+- Mobile API-Typen werden aus OpenAPI generiert, nicht manuell nachgebaut.
+- Seed-Tests werden nur bewusst ausgeführt, weil sie persistente Daten anlegen.

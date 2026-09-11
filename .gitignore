@@ -9,14 +9,10 @@ reference-*/
 
 node_modules/
 
-.agents/
-AGENTS.md
 
 .vscode/
 
 .env
-
-README.md
 
 # Expo
 .expo/
