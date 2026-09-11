@@ -23,6 +23,12 @@ let unauthorizedHandler: (() => void) | undefined;
 let refreshPromise: Promise<StoredAuthSession> | null = null;
 let sessionInvalidationPromise: Promise<void> | null = null;
 
+function createRefreshIdempotencyKey(): string {
+    return `${Date.now().toString(36)}-${Math.random()
+        .toString(36)
+        .slice(2)}-${Math.random().toString(36).slice(2)}`;
+}
+
 export function setUnauthorizedHandler(handler: () => void) {
     unauthorizedHandler = handler;
 
@@ -54,7 +60,10 @@ async function performRefresh(
 ): Promise<StoredAuthSession> {
     const response = await authSessionClient.post<AuthTokenPairResponse>(
         REFRESH_ENDPOINT,
-        { refresh_token: refreshToken },
+        {
+            refresh_token: refreshToken,
+            idempotency_key: createRefreshIdempotencyKey(),
+        },
     );
     const storedSession = toStoredAuthSession(response.data);
 

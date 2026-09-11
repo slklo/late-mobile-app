@@ -1,4 +1,5 @@
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from core.config import settings
 from users.schemas import UserRead
 
 from typing import Literal
@@ -42,6 +43,10 @@ class RefreshTokenRequest(AuthRequest):
     refresh_token: str = Field(
         min_length=32,
         max_length=512,
+    )
+    idempotency_key: str = Field(
+        min_length=settings.refresh_idempotency_key_min_length,
+        max_length=settings.refresh_idempotency_key_max_length,
     )
 
 class RefreshTokenResponse(BaseModel):

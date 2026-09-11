@@ -18,6 +18,7 @@ from auth.session_service import SessionService, SessionServiceConfig
 from auth.token_service import (
     decode_access_token,
     generate_refresh_token,
+    hash_refresh_idempotency_key,
     hash_refresh_token,
 )
 from core.database import Base
@@ -30,6 +31,7 @@ TEST_CONFIG = SessionServiceConfig(
     refresh_token_expire_days=30,
     refresh_token_bytes=32,
 )
+IDEMPOTENCY_KEY = "refresh-attempt-key-123"
 
 
 @pytest.fixture
@@ -110,7 +112,10 @@ def test_refresh_session_rotates_token_and_links_generations(
     issued = service.issue_session(user)
     old_hash = hash_refresh_token(issued.refresh_token)
 
-    rotated = service.refresh_session(issued.refresh_token)
+    rotated = service.refresh_session(
+        issued.refresh_token,
+        IDEMPOTENCY_KEY,
+    )
 
     old_session = refresh_sessions.get_by_token_hash(old_hash)
     new_session = refresh_sessions.get_by_token_hash(
@@ -121,7 +126,12 @@ def test_refresh_session_rotates_token_and_links_generations(
     assert rotated.refresh_token != issued.refresh_token
     assert old_session.revoked_at is not None
     assert old_session.last_used_at is not None
+    assert old_session.rotated_at is not None
+    assert old_session.grace_expires_at is not None
     assert old_session.replaced_by_id == new_session.id
+    assert old_session.last_refresh_idempotency_key_hash == (
+        hash_refresh_idempotency_key(IDEMPOTENCY_KEY)
+    )
     assert old_session.family_id == new_session.family_id
     assert new_session.revoked_at is None
     assert decode_access_token(rotated.access_token) == user.id
@@ -140,7 +150,7 @@ def test_refresh_session_uses_locking_repository_lookup(
     tracked_repository = MagicMock(wraps=refresh_sessions)
     service.refresh_sessions = tracked_repository
 
-    service.refresh_session(issued.refresh_token)
+    service.refresh_session(issued.refresh_token, IDEMPOTENCY_KEY)
 
     tracked_repository.get_active_by_token_hash_for_update.assert_called_once_with(
         hash_refresh_token(issued.refresh_token),
@@ -157,10 +167,13 @@ def test_reusing_rotated_token_revokes_entire_family(
 ) -> None:
     service, _, refresh_sessions, user = session_service
     issued = service.issue_session(user)
-    rotated = service.refresh_session(issued.refresh_token)
+    rotated = service.refresh_session(
+        issued.refresh_token,
+        IDEMPOTENCY_KEY,
+    )
 
     with pytest.raises(InvalidRefreshTokenError) as reused_error:
-        service.refresh_session(issued.refresh_token)
+        service.refresh_session(issued.refresh_token, IDEMPOTENCY_KEY)
 
     assert issued.refresh_token not in str(reused_error.value)
 
@@ -179,7 +192,7 @@ def test_reusing_rotated_token_revokes_entire_family(
     )
 
     with pytest.raises(InvalidRefreshTokenError):
-        service.refresh_session(rotated.refresh_token)
+        service.refresh_session(rotated.refresh_token, IDEMPOTENCY_KEY)
 
 
 def test_expired_refresh_token_is_rejected(
@@ -202,7 +215,7 @@ def test_expired_refresh_token_is_rejected(
     db.commit()
 
     with pytest.raises(InvalidRefreshTokenError):
-        service.refresh_session(refresh_token)
+        service.refresh_session(refresh_token, IDEMPOTENCY_KEY)
 
     assert expired_session.revoked_at is None
 
@@ -237,7 +250,7 @@ def test_revoked_refresh_token_is_rejected_and_family_is_revoked(
     db.commit()
 
     with pytest.raises(InvalidRefreshTokenError):
-        service.refresh_session(revoked_token)
+        service.refresh_session(revoked_token, IDEMPOTENCY_KEY)
 
     db.refresh(successor)
     assert successor.revoked_at is not None
@@ -257,7 +270,7 @@ def test_inactive_user_is_rejected_and_family_is_revoked(
     db.commit()
 
     with pytest.raises(InvalidRefreshTokenError):
-        service.refresh_session(issued.refresh_token)
+        service.refresh_session(issued.refresh_token, IDEMPOTENCY_KEY)
 
     stored = refresh_sessions.get_by_token_hash(
         hash_refresh_token(issued.refresh_token),
@@ -278,7 +291,7 @@ def test_unknown_refresh_token_is_rejected(
     service, _, _, _ = session_service
 
     with pytest.raises(InvalidRefreshTokenError):
-        service.refresh_session(generate_refresh_token())
+        service.refresh_session(generate_refresh_token(), IDEMPOTENCY_KEY)
 
 
 def test_failed_rotation_rolls_back_both_generations(
@@ -303,7 +316,7 @@ def test_failed_rotation_rolls_back_both_generations(
     monkeypatch.setattr(service, "_build_tokens", fail_token_building)
 
     with pytest.raises(RuntimeError, match="token building failed"):
-        service.refresh_session(issued.refresh_token)
+        service.refresh_session(issued.refresh_token, IDEMPOTENCY_KEY)
 
     stored_old_session = refresh_sessions.get_by_token_hash(old_hash)
     family = refresh_sessions.list_by_family_id(family_id)
@@ -387,7 +400,7 @@ def test_refresh_database_failure_is_translated_without_details(
     with pytest.raises(
         AuthenticationServiceUnavailableError,
     ) as exc_info:
-        service.refresh_session(refresh_token)
+        service.refresh_session(refresh_token, IDEMPOTENCY_KEY)
 
     assert exc_info.value.code == "AUTHENTICATION_SERVICE_UNAVAILABLE"
     assert str(exc_info.value) == "Authentication is temporarily unavailable"

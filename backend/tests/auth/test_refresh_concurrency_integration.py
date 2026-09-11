@@ -19,6 +19,7 @@ from users.repository import UserRepository
 
 
 RUN_DB_INTEGRATION = os.getenv("RUN_DB_INTEGRATION") == "1"
+IDEMPOTENCY_KEY = "refresh-attempt-key-123"
 
 pytestmark = [
     pytest.mark.db_integration,
@@ -67,7 +68,10 @@ def test_two_parallel_refreshes_create_only_one_successor() -> None:
                 start_gate.wait(timeout=10)
 
                 try:
-                    service.refresh_session(issued.refresh_token)
+                    service.refresh_session(
+                        issued.refresh_token,
+                        IDEMPOTENCY_KEY,
+                    )
                 except InvalidRefreshTokenError:
                     return "rejected"
 

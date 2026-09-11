@@ -15,6 +15,7 @@ from auth.session_repository import RefreshSessionRepository
 from auth.token_service import (
     create_access_token,
     generate_refresh_token,
+    hash_refresh_idempotency_key,
     hash_refresh_token,
 )
 from core.config import settings
@@ -27,6 +28,7 @@ class SessionServiceConfig:
     access_token_expire_minutes: int
     refresh_token_expire_days: int
     refresh_token_bytes: int
+    refresh_rotation_grace_seconds: int = 30
 
     def __post_init__(self) -> None:
         if self.access_token_expire_minutes <= 0:
@@ -39,6 +41,10 @@ class SessionServiceConfig:
             )
         if self.refresh_token_bytes < 32:
             raise ValueError("refresh_token_bytes must be at least 32")
+        if self.refresh_rotation_grace_seconds < 0:
+            raise ValueError(
+                "refresh_rotation_grace_seconds must not be negative",
+            )
 
     @classmethod
     def from_settings(cls) -> "SessionServiceConfig":
@@ -48,6 +54,9 @@ class SessionServiceConfig:
             ),
             refresh_token_expire_days=settings.refresh_token_expire_days,
             refresh_token_bytes=settings.refresh_token_bytes,
+            refresh_rotation_grace_seconds=(
+                settings.refresh_rotation_grace_seconds
+            ),
         )
 
 
@@ -103,8 +112,15 @@ class SessionService:
 
         return tokens
 
-    def refresh_session(self, refresh_token: str) -> AuthSessionTokens:
+    def refresh_session(
+        self,
+        refresh_token: str,
+        idempotency_key: str,
+    ) -> AuthSessionTokens:
         token_hash = hash_refresh_token(refresh_token)
+        idempotency_key_hash = hash_refresh_idempotency_key(
+            idempotency_key,
+        )
         now = datetime.now(timezone.utc)
         reject_after_commit = False
         tokens: AuthSessionTokens | None = None
@@ -154,6 +170,7 @@ class SessionService:
                         current=current,
                         user=user,
                         now=now,
+                        idempotency_key_hash=idempotency_key_hash,
                     )
 
             self.db.flush()
@@ -217,6 +234,7 @@ class SessionService:
         current: RefreshSession,
         user: User,
         now: datetime,
+        idempotency_key_hash: str,
     ) -> AuthSessionTokens:
         next_refresh_token = generate_refresh_token(
             self.config.refresh_token_bytes,
@@ -234,7 +252,18 @@ class SessionService:
         self.db.flush([next_session])
         self.refresh_sessions.revoke(current, now)
         current.last_used_at = now
-        current.replaced_by_id = next_session.id
+        self.refresh_sessions.mark_rotated(
+            current,
+            rotated_at=now,
+            grace_expires_at=(
+                now
+                + timedelta(
+                    seconds=self.config.refresh_rotation_grace_seconds,
+                )
+            ),
+            replaced_by_id=next_session.id,
+            idempotency_key_hash=idempotency_key_hash,
+        )
 
         return self._build_tokens(user.id, next_refresh_token)
 

@@ -2,7 +2,11 @@ import re
 
 import pytest
 
-from auth.token_service import generate_refresh_token, hash_refresh_token
+from auth.token_service import (
+    generate_refresh_token,
+    hash_refresh_idempotency_key,
+    hash_refresh_token,
+)
 
 
 def test_generate_refresh_token_returns_distinct_high_entropy_tokens() -> None:
@@ -32,3 +36,14 @@ def test_hash_refresh_token_is_deterministic_sha256_hex() -> None:
     assert len(first_hash) == 64
     assert re.fullmatch(r"[0-9a-f]{64}", first_hash)
 
+
+def test_hash_refresh_idempotency_key_is_deterministic_sha256_hex() -> None:
+    idempotency_key = "refresh-attempt-key-123"
+
+    first_hash = hash_refresh_idempotency_key(idempotency_key)
+    second_hash = hash_refresh_idempotency_key(idempotency_key)
+
+    assert first_hash == second_hash
+    assert first_hash != idempotency_key
+    assert len(first_hash) == 64
+    assert re.fullmatch(r"[0-9a-f]{64}", first_hash)

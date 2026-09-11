@@ -18,17 +18,24 @@ from core.exception_handlers import register_exception_handlers
 OLD_REFRESH_TOKEN = "old-refresh-token-" + "a" * 32
 NEW_REFRESH_TOKEN = "new-refresh-token-" + "b" * 32
 UNKNOWN_REFRESH_TOKEN = "unknown-refresh-token-" + "c" * 32
+IDEMPOTENCY_KEY = "refresh-attempt-key-123"
 
 
 class StubSessionService:
     def __init__(self) -> None:
         self.last_refresh_token: str | None = None
+        self.last_refresh_idempotency_key: str | None = None
         self.last_revoked_token: str | None = None
         self.refresh_error: Exception | None = None
         self.revoke_error: Exception | None = None
 
-    def refresh_session(self, refresh_token: str) -> AuthSessionTokens:
+    def refresh_session(
+        self,
+        refresh_token: str,
+        idempotency_key: str,
+    ) -> AuthSessionTokens:
         self.last_refresh_token = refresh_token
+        self.last_refresh_idempotency_key = idempotency_key
 
         if self.refresh_error is not None:
             raise self.refresh_error
@@ -74,7 +81,10 @@ def test_refresh_returns_new_token_pair_without_session_metadata(
 ) -> None:
     response = client.post(
         "/api/auth/token/refresh",
-        json={"refresh_token": OLD_REFRESH_TOKEN},
+        json={
+            "refresh_token": OLD_REFRESH_TOKEN,
+            "idempotency_key": IDEMPOTENCY_KEY,
+        },
     )
 
     assert response.status_code == 200
@@ -96,11 +106,15 @@ def test_refresh_passes_token_to_session_service(
 ) -> None:
     response = client.post(
         "/api/auth/token/refresh",
-        json={"refresh_token": OLD_REFRESH_TOKEN},
+        json={
+            "refresh_token": OLD_REFRESH_TOKEN,
+            "idempotency_key": IDEMPOTENCY_KEY,
+        },
     )
 
     assert response.status_code == 200
     assert session_service.last_refresh_token == OLD_REFRESH_TOKEN
+    assert session_service.last_refresh_idempotency_key == IDEMPOTENCY_KEY
 
 
 def test_invalid_refresh_token_uses_neutral_401_contract(
@@ -111,7 +125,10 @@ def test_invalid_refresh_token_uses_neutral_401_contract(
 
     response = client.post(
         "/api/auth/token/refresh",
-        json={"refresh_token": OLD_REFRESH_TOKEN},
+        json={
+            "refresh_token": OLD_REFRESH_TOKEN,
+            "idempotency_key": IDEMPOTENCY_KEY,
+        },
     )
 
     assert response.status_code == 401
@@ -132,7 +149,10 @@ def test_refresh_database_failure_uses_neutral_503_contract(
 
     response = client.post(
         "/api/auth/token/refresh",
-        json={"refresh_token": OLD_REFRESH_TOKEN},
+        json={
+            "refresh_token": OLD_REFRESH_TOKEN,
+            "idempotency_key": IDEMPOTENCY_KEY,
+        },
     )
 
     assert response.status_code == 503
@@ -155,7 +175,10 @@ def test_refresh_failure_does_not_log_token(
     with caplog.at_level(logging.DEBUG):
         response = client.post(
             "/api/auth/token/refresh",
-            json={"refresh_token": OLD_REFRESH_TOKEN},
+            json={
+                "refresh_token": OLD_REFRESH_TOKEN,
+                "idempotency_key": IDEMPOTENCY_KEY,
+            },
         )
 
     assert response.status_code == 401
@@ -168,6 +191,11 @@ def test_refresh_failure_does_not_log_token(
     [
         {},
         {"refresh_token": ""},
+        {"refresh_token": OLD_REFRESH_TOKEN},
+        {
+            "refresh_token": OLD_REFRESH_TOKEN,
+            "idempotency_key": "too-short",
+        },
     ],
 )
 def test_refresh_rejects_missing_or_empty_token(
@@ -180,6 +208,20 @@ def test_refresh_rejects_missing_or_empty_token(
     )
 
     assert response.status_code == 422
+
+
+def test_refresh_accepts_valid_idempotency_key(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        "/api/auth/token/refresh",
+        json={
+            "refresh_token": OLD_REFRESH_TOKEN,
+            "idempotency_key": IDEMPOTENCY_KEY,
+        },
+    )
+
+    assert response.status_code == 200
 
 
 def test_logout_revokes_token_and_returns_empty_204(

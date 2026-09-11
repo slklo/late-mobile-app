@@ -64,6 +64,8 @@ Alle leeren Werte müssen ausgefüllt werden. Besonders wichtig sind:
 | `DATABASE_URL` | SQLAlchemy-Verbindung; im Docker-Netz ist der Host `db` |
 | `REDIS_URL` | Redis-Verbindung; im Docker-Netz ist der Host `redis` |
 | `JWT_SECRET` | geheime Signatur des Access Tokens |
+| `REFRESH_ROTATION_GRACE_SECONDS` | vorbereitetes Grace Window für rotierte Refresh Tokens |
+| `REFRESH_IDEMPOTENCY_KEY_MIN_LENGTH`, `REFRESH_IDEMPOTENCY_KEY_MAX_LENGTH` | Längengrenzen für Refresh-Idempotency-Keys |
 | `AUTH_CHALLENGE_SECRET` | geheimer HMAC-Schlüssel für Login-Challenges, mindestens 32 Zeichen |
 | `APP_ENVIRONMENT` | `development`, `test` oder `production` |
 

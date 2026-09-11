@@ -158,8 +158,9 @@ describe("apiClient automatic refresh", () => {
         authSessionClient.defaults.adapter = async (config) => {
             refreshCalls += 1;
             expect(config.url).toBe("/auth/token/refresh");
-            expect(JSON.parse(String(config.data))).toEqual({
+            expect(JSON.parse(String(config.data))).toMatchObject({
                 refresh_token: OLD_SESSION.refreshToken,
+                idempotency_key: expect.any(String),
             });
             return response(config, 200, REFRESH_RESPONSE);
         };

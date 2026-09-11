@@ -132,7 +132,10 @@ def refresh_access_token(
     payload: RefreshTokenRequest,
     service: SessionService = Depends(get_session_service),
 ) -> RefreshTokenResponse:
-    tokens = service.refresh_session(payload.refresh_token)
+    tokens = service.refresh_session(
+        payload.refresh_token,
+        payload.idempotency_key,
+    )
 
     return RefreshTokenResponse(
         access_token=tokens.access_token,

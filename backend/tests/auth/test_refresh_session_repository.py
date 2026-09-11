@@ -78,6 +78,22 @@ def test_get_by_id_finds_session(
     assert result is refresh_session
 
 
+def test_get_by_id_for_update_locks_session() -> None:
+    db = MagicMock(spec=Session)
+    db.scalars.return_value.one_or_none.return_value = None
+    repository = RefreshSessionRepository(db)
+    session_id = uuid4()
+
+    result = repository.get_by_id_for_update(session_id)
+
+    statement = db.scalars.call_args.args[0]
+    compiled = str(statement.compile(dialect=postgresql.dialect()))
+
+    assert result is None
+    assert "auth_refresh_sessions.id =" in compiled
+    assert compiled.endswith("FOR UPDATE")
+
+
 def test_get_by_token_hash_finds_session(
     repository: RefreshSessionRepository,
     db_session: Session,
@@ -90,6 +106,37 @@ def test_get_by_token_hash_finds_session(
     result = repository.get_by_token_hash(token_hash)
 
     assert result is refresh_session
+
+
+def test_get_by_token_hash_for_update_locks_session() -> None:
+    db = MagicMock(spec=Session)
+    db.scalars.return_value.one_or_none.return_value = None
+    repository = RefreshSessionRepository(db)
+
+    result = repository.get_by_token_hash_for_update("c" * 64)
+
+    statement = db.scalars.call_args.args[0]
+    compiled = str(statement.compile(dialect=postgresql.dialect()))
+
+    assert result is None
+    assert "auth_refresh_sessions.token_hash =" in compiled
+    assert compiled.endswith("FOR UPDATE")
+
+
+def test_get_successor_for_update_locks_replaced_session() -> None:
+    db = MagicMock(spec=Session)
+    db.scalars.return_value.one_or_none.return_value = None
+    repository = RefreshSessionRepository(db)
+    successor_id = uuid4()
+
+    result = repository.get_successor_for_update(successor_id)
+
+    statement = db.scalars.call_args.args[0]
+    compiled = str(statement.compile(dialect=postgresql.dialect()))
+
+    assert result is None
+    assert "auth_refresh_sessions.id =" in compiled
+    assert compiled.endswith("FOR UPDATE")
 
 
 def test_get_active_by_token_hash_returns_active_session(
@@ -155,6 +202,36 @@ def test_revoke_sets_revoked_at(
 
     assert result is refresh_session
     assert refresh_session.revoked_at == revoked_at
+
+
+def test_mark_rotated_sets_rotation_contract_fields(
+    repository: RefreshSessionRepository,
+    db_session: Session,
+) -> None:
+    refresh_session = make_refresh_session(token_hash="0" * 64)
+    repository.add(refresh_session)
+    db_session.flush()
+    rotated_at = datetime.now(timezone.utc)
+    grace_expires_at = rotated_at + timedelta(seconds=30)
+    replaced_by_id = uuid4()
+    idempotency_key_hash = "a" * 64
+
+    result = repository.mark_rotated(
+        refresh_session,
+        rotated_at=rotated_at,
+        grace_expires_at=grace_expires_at,
+        replaced_by_id=replaced_by_id,
+        idempotency_key_hash=idempotency_key_hash,
+    )
+
+    assert result is refresh_session
+    assert refresh_session.rotated_at == rotated_at
+    assert refresh_session.grace_expires_at == grace_expires_at
+    assert refresh_session.replaced_by_id == replaced_by_id
+    assert (
+        refresh_session.last_refresh_idempotency_key_hash
+        == idempotency_key_hash
+    )
 
 
 def test_list_by_family_id_returns_only_family_sessions(

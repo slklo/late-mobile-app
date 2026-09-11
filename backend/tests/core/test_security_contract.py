@@ -43,6 +43,43 @@ def test_production_rejects_weak_challenge_secret() -> None:
         )
 
 
+def test_refresh_rotation_settings_validate_bounds() -> None:
+    settings = Settings(
+        **{
+            **VALID_SETTINGS,
+            "refresh_rotation_grace_seconds": 0,
+            "refresh_idempotency_key_min_length": 16,
+            "refresh_idempotency_key_max_length": 128,
+        },
+        _env_file=None,
+    )
+
+    assert settings.refresh_rotation_grace_seconds == 0
+    assert settings.refresh_idempotency_key_min_length == 16
+    assert settings.refresh_idempotency_key_max_length == 128
+
+    with pytest.raises(ValidationError):
+        Settings(
+            **{
+                **VALID_SETTINGS,
+                "refresh_rotation_grace_seconds": -1,
+            },
+            _env_file=None,
+        )
+
+
+def test_refresh_idempotency_key_max_length_cannot_be_below_minimum() -> None:
+    with pytest.raises(ValidationError):
+        Settings(
+            **{
+                **VALID_SETTINGS,
+                "refresh_idempotency_key_min_length": 32,
+                "refresh_idempotency_key_max_length": 16,
+            },
+            _env_file=None,
+        )
+
+
 # TODO: Re-enable when production JWT secret validation is implemented.
 # def test_production_rejects_weak_jwt_secret() -> None:
 #     with pytest.raises(ValidationError):

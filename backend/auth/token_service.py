@@ -44,6 +44,10 @@ def hash_refresh_token(refresh_token: str) -> str:
     return sha256(refresh_token.encode("utf-8")).hexdigest()
 
 
+def hash_refresh_idempotency_key(value: str) -> str:
+    return sha256(value.encode("utf-8")).hexdigest()
+
+
 def decode_access_token(token: str) -> int | None:
     try:
         payload = jwt.decode(

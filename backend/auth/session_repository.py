@@ -20,11 +20,39 @@ class RefreshSessionRepository:
         stmt = select(RefreshSession).where(RefreshSession.id == session_id)
         return self.db.scalars(stmt).one_or_none()
 
+    def get_by_id_for_update(
+        self,
+        session_id: UUID,
+    ) -> RefreshSession | None:
+        stmt = (
+            select(RefreshSession)
+            .where(RefreshSession.id == session_id)
+            .with_for_update()
+        )
+        return self.db.scalars(stmt).one_or_none()
+
     def get_by_token_hash(self, token_hash: str) -> RefreshSession | None:
         stmt = select(RefreshSession).where(
             RefreshSession.token_hash == token_hash,
         )
         return self.db.scalars(stmt).one_or_none()
+
+    def get_by_token_hash_for_update(
+        self,
+        token_hash: str,
+    ) -> RefreshSession | None:
+        stmt = (
+            select(RefreshSession)
+            .where(RefreshSession.token_hash == token_hash)
+            .with_for_update()
+        )
+        return self.db.scalars(stmt).one_or_none()
+
+    def get_successor_for_update(
+        self,
+        replaced_by_id: UUID,
+    ) -> RefreshSession | None:
+        return self.get_by_id_for_update(replaced_by_id)
 
     def get_active_by_token_hash(
         self,
@@ -48,6 +76,22 @@ class RefreshSessionRepository:
         revoked_at: datetime,
     ) -> RefreshSession:
         session.revoked_at = revoked_at
+        self.db.add(session)
+        return session
+
+    def mark_rotated(
+        self,
+        session: RefreshSession,
+        *,
+        rotated_at: datetime,
+        grace_expires_at: datetime,
+        replaced_by_id: UUID,
+        idempotency_key_hash: str,
+    ) -> RefreshSession:
+        session.rotated_at = rotated_at
+        session.grace_expires_at = grace_expires_at
+        session.replaced_by_id = replaced_by_id
+        session.last_refresh_idempotency_key_hash = idempotency_key_hash
         self.db.add(session)
         return session
 
