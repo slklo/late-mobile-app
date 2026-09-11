@@ -198,6 +198,46 @@ def test_reusing_rotated_token_inside_grace_with_same_key_rejects_without_family
     )
 
 
+def test_successor_token_remains_usable_after_same_key_grace_retry(
+    session_service: tuple[
+        SessionService,
+        Session,
+        RefreshSessionRepository,
+        User,
+    ],
+) -> None:
+    service, _, refresh_sessions, user = session_service
+    issued = service.issue_session(user)
+    rotated = service.refresh_session(
+        issued.refresh_token,
+        IDEMPOTENCY_KEY,
+    )
+
+    with pytest.raises(InvalidRefreshTokenError):
+        service.refresh_session(issued.refresh_token, IDEMPOTENCY_KEY)
+
+    second_rotation = service.refresh_session(
+        rotated.refresh_token,
+        OTHER_IDEMPOTENCY_KEY,
+    )
+
+    old_session = refresh_sessions.get_by_token_hash(
+        hash_refresh_token(issued.refresh_token),
+    )
+    rotated_session = refresh_sessions.get_by_token_hash(
+        hash_refresh_token(rotated.refresh_token),
+    )
+    second_session = refresh_sessions.get_by_token_hash(
+        hash_refresh_token(second_rotation.refresh_token),
+    )
+    assert old_session is not None
+    assert rotated_session is not None
+    assert second_session is not None
+    assert old_session.family_id == rotated_session.family_id
+    assert rotated_session.family_id == second_session.family_id
+    assert second_session.revoked_at is None
+
+
 def test_reusing_rotated_token_inside_grace_with_different_key_revokes_family(
     session_service: tuple[
         SessionService,
