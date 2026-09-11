@@ -32,6 +32,7 @@ TEST_CONFIG = SessionServiceConfig(
     refresh_token_bytes=32,
 )
 IDEMPOTENCY_KEY = "refresh-attempt-key-123"
+OTHER_IDEMPOTENCY_KEY = "refresh-attempt-key-456"
 
 
 @pytest.fixture
@@ -157,7 +158,7 @@ def test_refresh_session_uses_locking_repository_lookup(
     )
 
 
-def test_reusing_rotated_token_revokes_entire_family(
+def test_reusing_rotated_token_inside_grace_with_same_key_rejects_without_family_revoke(
     session_service: tuple[
         SessionService,
         Session,
@@ -180,6 +181,47 @@ def test_reusing_rotated_token_revokes_entire_family(
     old_session = refresh_sessions.get_by_token_hash(
         hash_refresh_token(issued.refresh_token),
     )
+    new_session = refresh_sessions.get_by_token_hash(
+        hash_refresh_token(rotated.refresh_token),
+    )
+    assert old_session is not None
+    assert new_session is not None
+    family = refresh_sessions.list_by_family_id(old_session.family_id)
+    assert len(family) == 2
+    assert old_session.revoked_at is not None
+    assert new_session.revoked_at is None
+    assert (
+        refresh_sessions.get_active_by_token_hash(
+            hash_refresh_token(rotated.refresh_token),
+        )
+        is not None
+    )
+
+
+def test_reusing_rotated_token_inside_grace_with_different_key_revokes_family(
+    session_service: tuple[
+        SessionService,
+        Session,
+        RefreshSessionRepository,
+        User,
+    ],
+) -> None:
+    service, _, refresh_sessions, user = session_service
+    issued = service.issue_session(user)
+    rotated = service.refresh_session(
+        issued.refresh_token,
+        IDEMPOTENCY_KEY,
+    )
+
+    with pytest.raises(InvalidRefreshTokenError):
+        service.refresh_session(
+            issued.refresh_token,
+            OTHER_IDEMPOTENCY_KEY,
+        )
+
+    old_session = refresh_sessions.get_by_token_hash(
+        hash_refresh_token(issued.refresh_token),
+    )
     assert old_session is not None
     family = refresh_sessions.list_by_family_id(old_session.family_id)
     assert len(family) == 2
@@ -191,8 +233,81 @@ def test_reusing_rotated_token_revokes_entire_family(
         is None
     )
 
+
+def test_reusing_rotated_token_outside_grace_revokes_family(
+    session_service: tuple[
+        SessionService,
+        Session,
+        RefreshSessionRepository,
+        User,
+    ],
+) -> None:
+    service, db, refresh_sessions, user = session_service
+    issued = service.issue_session(user)
+    rotated = service.refresh_session(
+        issued.refresh_token,
+        IDEMPOTENCY_KEY,
+    )
+    old_session = refresh_sessions.get_by_token_hash(
+        hash_refresh_token(issued.refresh_token),
+    )
+    assert old_session is not None
+    old_session.grace_expires_at = (
+        datetime.now(timezone.utc) - timedelta(seconds=1)
+    )
+    db.commit()
+
     with pytest.raises(InvalidRefreshTokenError):
-        service.refresh_session(rotated.refresh_token, IDEMPOTENCY_KEY)
+        service.refresh_session(issued.refresh_token, IDEMPOTENCY_KEY)
+
+    family = refresh_sessions.list_by_family_id(old_session.family_id)
+    assert len(family) == 2
+    assert all(item.revoked_at is not None for item in family)
+    assert (
+        refresh_sessions.get_active_by_token_hash(
+            hash_refresh_token(rotated.refresh_token),
+        )
+        is None
+    )
+
+
+def test_zero_second_grace_treats_rotated_token_as_outside_grace(
+    session_service: tuple[
+        SessionService,
+        Session,
+        RefreshSessionRepository,
+        User,
+    ],
+) -> None:
+    service, _, refresh_sessions, user = session_service
+    service.config = SessionServiceConfig(
+        access_token_expire_minutes=15,
+        refresh_token_expire_days=30,
+        refresh_token_bytes=32,
+        refresh_rotation_grace_seconds=0,
+    )
+    issued = service.issue_session(user)
+    rotated = service.refresh_session(
+        issued.refresh_token,
+        IDEMPOTENCY_KEY,
+    )
+
+    with pytest.raises(InvalidRefreshTokenError):
+        service.refresh_session(issued.refresh_token, IDEMPOTENCY_KEY)
+
+    old_session = refresh_sessions.get_by_token_hash(
+        hash_refresh_token(issued.refresh_token),
+    )
+    assert old_session is not None
+    family = refresh_sessions.list_by_family_id(old_session.family_id)
+    assert len(family) == 2
+    assert all(item.revoked_at is not None for item in family)
+    assert (
+        refresh_sessions.get_active_by_token_hash(
+            hash_refresh_token(rotated.refresh_token),
+        )
+        is None
+    )
 
 
 def test_expired_refresh_token_is_rejected(
@@ -220,7 +335,7 @@ def test_expired_refresh_token_is_rejected(
     assert expired_session.revoked_at is None
 
 
-def test_revoked_refresh_token_is_rejected_and_family_is_revoked(
+def test_revoked_refresh_token_without_rotation_is_rejected_without_family_revoke(
     session_service: tuple[
         SessionService,
         Session,
@@ -253,7 +368,7 @@ def test_revoked_refresh_token_is_rejected_and_family_is_revoked(
         service.refresh_session(revoked_token, IDEMPOTENCY_KEY)
 
     db.refresh(successor)
-    assert successor.revoked_at is not None
+    assert successor.revoked_at is None
 
 
 def test_inactive_user_is_rejected_and_family_is_revoked(

@@ -42,7 +42,7 @@ def make_service(db: Session) -> SessionService:
     )
 
 
-def test_two_parallel_refreshes_create_only_one_successor() -> None:
+def test_two_parallel_refreshes_with_same_idempotency_key_keep_successor_active() -> None:
     email = f"refresh-race-{uuid4().hex}@example.com"
     user_id: int | None = None
 
@@ -97,8 +97,12 @@ def test_two_parallel_refreshes_create_only_one_successor() -> None:
             )
 
             assert len(family) == 2
-            assert sum(item.id != original.id for item in family) == 1
-            assert all(item.revoked_at is not None for item in family)
+            successors = [
+                item for item in family if item.id != original.id
+            ]
+            assert len(successors) == 1
+            assert original.revoked_at is not None
+            assert successors[0].revoked_at is None
     finally:
         if user_id is not None:
             with SessionLocal() as cleanup_db:

@@ -133,27 +133,31 @@ class SessionService:
             )
 
             if current is None:
-                existing = self.refresh_sessions.get_by_token_hash(
+                existing = self.refresh_sessions.get_by_token_hash_for_update(
                     token_hash,
                 )
 
                 if existing is None:
                     raise InvalidRefreshTokenError()
 
-                if self._indicates_reuse(existing):
-                    self.refresh_sessions.revoke_family(
-                        existing.family_id,
-                        now,
+                if self._is_rotated(existing):
+                    reject_after_commit = self._handle_rotated_token_reuse(
+                        refresh_session=existing,
+                        idempotency_key_hash=idempotency_key_hash,
+                        now=now,
                     )
-                    reject_after_commit = True
+                elif existing.revoked_at is not None:
+                    raise InvalidRefreshTokenError()
                 else:
                     raise InvalidRefreshTokenError()
-            elif self._indicates_reuse(current):
+            elif self._is_rotated(current):
                 self.refresh_sessions.revoke_family(
                     current.family_id,
                     now,
                 )
                 reject_after_commit = True
+            elif current.revoked_at is not None:
+                raise InvalidRefreshTokenError()
             elif self._is_expired(current.expires_at, now):
                 raise InvalidRefreshTokenError()
             else:
@@ -188,6 +192,31 @@ class SessionService:
             raise InvalidRefreshTokenError()
 
         return tokens
+
+    def _handle_rotated_token_reuse(
+        self,
+        *,
+        refresh_session: RefreshSession,
+        idempotency_key_hash: str,
+        now: datetime,
+    ) -> bool:
+        if self._is_same_grace_retry(
+            refresh_session=refresh_session,
+            idempotency_key_hash=idempotency_key_hash,
+            now=now,
+        ):
+            if refresh_session.replaced_by_id is not None:
+                self.refresh_sessions.get_successor_for_update(
+                    refresh_session.replaced_by_id,
+                )
+
+            return False
+
+        self.refresh_sessions.revoke_family(
+            refresh_session.family_id,
+            now,
+        )
+        return True
 
     def revoke_session(self, refresh_token: str) -> None:
         token_hash = hash_refresh_token(refresh_token)
@@ -289,11 +318,25 @@ class SessionService:
         )
 
     @staticmethod
-    def _indicates_reuse(refresh_session: RefreshSession) -> bool:
-        return (
-            refresh_session.revoked_at is not None
-            or refresh_session.replaced_by_id is not None
-        )
+    def _is_rotated(refresh_session: RefreshSession) -> bool:
+        return refresh_session.replaced_by_id is not None
+
+    def _is_same_grace_retry(
+        self,
+        *,
+        refresh_session: RefreshSession,
+        idempotency_key_hash: str,
+        now: datetime,
+    ) -> bool:
+        if refresh_session.last_refresh_idempotency_key_hash != (
+            idempotency_key_hash
+        ):
+            return False
+
+        if refresh_session.grace_expires_at is None:
+            return False
+
+        return not self._is_expired(refresh_session.grace_expires_at, now)
 
     @staticmethod
     def _is_expired(expires_at: datetime, now: datetime) -> bool:
