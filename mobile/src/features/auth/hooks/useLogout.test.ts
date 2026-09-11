@@ -43,6 +43,15 @@ const SESSION: StoredAuthSession = {
     refreshExpiresAt: 1_802_592_000_000,
 };
 
+const SESSION_WITH_PENDING_REFRESH: StoredAuthSession = {
+    ...SESSION,
+    pendingRefresh: {
+        idempotencyKey: "pending-refresh-attempt-key",
+        refreshToken: SESSION.refreshToken,
+        createdAt: 1_800_000_000_100,
+    },
+};
+
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -63,6 +72,22 @@ describe("useLogout", () => {
         );
         expect(mocks.removeAuthSession).toHaveBeenCalledTimes(1);
         expect(mocks.resetAuthFlow).toHaveBeenCalledTimes(1);
+        expect(mocks.clearUser).toHaveBeenCalledTimes(1);
+        expect(mocks.clearQueries).toHaveBeenCalledTimes(1);
+    });
+
+    it("clears local auth state with a pending refresh attempt", async () => {
+        mocks.getStoredAuthSession.mockResolvedValue(
+            SESSION_WITH_PENDING_REFRESH,
+        );
+        const logout = useLogout();
+
+        await logout();
+
+        expect(mocks.logoutAuthSession).toHaveBeenCalledWith(
+            SESSION.refreshToken,
+        );
+        expect(mocks.removeAuthSession).toHaveBeenCalledTimes(1);
         expect(mocks.clearUser).toHaveBeenCalledTimes(1);
         expect(mocks.clearQueries).toHaveBeenCalledTimes(1);
     });

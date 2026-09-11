@@ -3,11 +3,18 @@ import { Platform } from "react-native";
 
 const AUTH_SESSION_KEY = "auth_session_v1";
 
+export type PendingRefresh = {
+    idempotencyKey: string;
+    refreshToken: string;
+    createdAt: number;
+};
+
 export type StoredAuthSession = {
     accessToken: string;
     refreshToken: string;
     accessExpiresAt: number;
     refreshExpiresAt: number;
+    pendingRefresh?: PendingRefresh;
 };
 
 export type AuthTokenPairResponse = {
@@ -35,8 +42,40 @@ export function toStoredAuthSession(
     };
 }
 
+export function createRefreshIdempotencyKey(): string {
+    const bytes = new Uint8Array(32);
+
+    if (globalThis.crypto?.getRandomValues) {
+        globalThis.crypto.getRandomValues(bytes);
+    } else {
+        for (let index = 0; index < bytes.length; index += 1) {
+            bytes[index] = Math.floor(Math.random() * 256);
+        }
+    }
+
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
+}
+
 function getWebStorage() {
     return typeof window === "undefined" ? null : window.sessionStorage;
+}
+
+function isPendingRefresh(value: unknown): value is PendingRefresh {
+    if (typeof value !== "object" || value === null) {
+        return false;
+    }
+
+    const candidate = value as Partial<PendingRefresh>;
+
+    return (
+        typeof candidate.idempotencyKey === "string"
+        && candidate.idempotencyKey.length >= 16
+        && typeof candidate.refreshToken === "string"
+        && candidate.refreshToken.length > 0
+        && typeof candidate.createdAt === "number"
+        && Number.isFinite(candidate.createdAt)
+    );
 }
 
 function isStoredAuthSession(value: unknown): value is StoredAuthSession {
@@ -46,7 +85,7 @@ function isStoredAuthSession(value: unknown): value is StoredAuthSession {
 
     const candidate = value as Partial<StoredAuthSession>;
 
-    return (
+    const hasValidBaseSession = (
         typeof candidate.accessToken === "string"
         && candidate.accessToken.length > 0
         && typeof candidate.refreshToken === "string"
@@ -55,6 +94,15 @@ function isStoredAuthSession(value: unknown): value is StoredAuthSession {
         && Number.isFinite(candidate.accessExpiresAt)
         && typeof candidate.refreshExpiresAt === "number"
         && Number.isFinite(candidate.refreshExpiresAt)
+    );
+
+    if (!hasValidBaseSession) {
+        return false;
+    }
+
+    return (
+        candidate.pendingRefresh === undefined
+        || isPendingRefresh(candidate.pendingRefresh)
     );
 }
 
@@ -90,6 +138,33 @@ export function saveAuthSession(session: StoredAuthSession): Promise<void> {
     }
 
     return SecureStore.setItemAsync(AUTH_SESSION_KEY, serializedSession);
+}
+
+export async function getOrCreatePendingRefresh(
+    refreshToken: string,
+): Promise<PendingRefresh> {
+    const session = await getStoredAuthSession();
+
+    if (session === null) {
+        throw new Error("Cannot start refresh without a stored session");
+    }
+
+    if (session.pendingRefresh?.refreshToken === refreshToken) {
+        return session.pendingRefresh;
+    }
+
+    const pendingRefresh: PendingRefresh = {
+        idempotencyKey: createRefreshIdempotencyKey(),
+        refreshToken,
+        createdAt: Date.now(),
+    };
+
+    await saveAuthSession({
+        ...session,
+        pendingRefresh,
+    });
+
+    return pendingRefresh;
 }
 
 export function removeAuthSession(): Promise<void> {

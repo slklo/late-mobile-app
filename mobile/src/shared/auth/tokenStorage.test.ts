@@ -21,7 +21,9 @@ vi.mock("react-native", () => ({
 }));
 
 import {
+    createRefreshIdempotencyKey,
     getAccessToken,
+    getOrCreatePendingRefresh,
     getRefreshToken,
     getStoredAuthSession,
     removeAccessToken,
@@ -45,6 +47,15 @@ const ROTATED_SESSION: StoredAuthSession = {
     refreshExpiresAt: 1_805_184_000_000,
 };
 
+const PENDING_SESSION: StoredAuthSession = {
+    ...SESSION,
+    pendingRefresh: {
+        idempotencyKey: "pending-refresh-attempt-key",
+        refreshToken: SESSION.refreshToken,
+        createdAt: 1_800_000_000_100,
+    },
+};
+
 
 beforeEach(() => {
     secureStore.values.clear();
@@ -61,6 +72,14 @@ describe("auth session storage", () => {
             JSON.stringify(SESSION),
         );
         await expect(getStoredAuthSession()).resolves.toEqual(SESSION);
+    });
+
+    it("restores sessions that contain a pending refresh attempt", async () => {
+        await saveAuthSession(PENDING_SESSION);
+
+        await expect(getStoredAuthSession()).resolves.toEqual(
+            PENDING_SESSION,
+        );
     });
 
     it("exposes access and refresh tokens from the same stored session", async () => {
@@ -104,5 +123,45 @@ describe("auth session storage", () => {
         );
 
         await expect(getStoredAuthSession()).resolves.toEqual(SESSION);
+    });
+
+    it("creates and reuses a pending refresh for the same refresh token", async () => {
+        await saveAuthSession(SESSION);
+
+        const firstPending = await getOrCreatePendingRefresh(
+            SESSION.refreshToken,
+        );
+        const secondPending = await getOrCreatePendingRefresh(
+            SESSION.refreshToken,
+        );
+
+        expect(firstPending).toEqual(secondPending);
+        expect(firstPending.refreshToken).toBe(SESSION.refreshToken);
+        expect(firstPending.idempotencyKey.length).toBeGreaterThanOrEqual(
+            16,
+        );
+        await expect(getStoredAuthSession()).resolves.toMatchObject({
+            pendingRefresh: firstPending,
+        });
+    });
+
+    it("creates a new pending refresh for a different refresh token", async () => {
+        await saveAuthSession(PENDING_SESSION);
+
+        const pending = await getOrCreatePendingRefresh(
+            ROTATED_SESSION.refreshToken,
+        );
+
+        expect(pending.refreshToken).toBe(ROTATED_SESSION.refreshToken);
+        expect(pending.idempotencyKey).not.toBe(
+            PENDING_SESSION.pendingRefresh?.idempotencyKey,
+        );
+    });
+
+    it("generates a long idempotency key without storing it alone", () => {
+        const key = createRefreshIdempotencyKey();
+
+        expect(key).toHaveLength(64);
+        expect(key).toMatch(/^[0-9a-f]+$/);
     });
 });

@@ -118,9 +118,27 @@ function authorization(config: InternalAxiosRequestConfig): unknown {
 }
 
 
+function requestData(
+    config: InternalAxiosRequestConfig,
+): Record<string, unknown> {
+    return JSON.parse(String(config.data)) as Record<string, unknown>;
+}
+
+
 beforeEach(async () => {
     vi.clearAllMocks();
     secureStore.values.clear();
+    secureStore.getItemAsync.mockImplementation(
+        async (key: string) => secureStore.values.get(key) ?? null,
+    );
+    secureStore.setItemAsync.mockImplementation(
+        async (key: string, value: string) => {
+            secureStore.values.set(key, value);
+        },
+    );
+    secureStore.deleteItemAsync.mockImplementation(async (key: string) => {
+        secureStore.values.delete(key);
+    });
     await saveAuthSession(OLD_SESSION);
     useAuthStore.setState({
         user: null,
@@ -158,7 +176,7 @@ describe("apiClient automatic refresh", () => {
         authSessionClient.defaults.adapter = async (config) => {
             refreshCalls += 1;
             expect(config.url).toBe("/auth/token/refresh");
-            expect(JSON.parse(String(config.data))).toMatchObject({
+            expect(requestData(config)).toMatchObject({
                 refresh_token: OLD_SESSION.refreshToken,
                 idempotency_key: expect.any(String),
             });
@@ -170,11 +188,77 @@ describe("apiClient automatic refresh", () => {
         expect(result.data).toEqual({ ok: true });
         expect(apiCalls).toBe(2);
         expect(refreshCalls).toBe(1);
-        await expect(getStoredAuthSession()).resolves.toMatchObject({
+        const storedSession = await getStoredAuthSession();
+
+        expect(storedSession).toMatchObject({
             accessToken: "new-access-token",
             refreshToken: "new-refresh-token",
         });
+        expect(storedSession).not.toHaveProperty("pendingRefresh");
         expect(unauthorizedHandler).not.toHaveBeenCalled();
+    });
+
+    it("persists the pending idempotency key before sending refresh", async () => {
+        let pendingKey: unknown;
+        let apiCalls = 0;
+
+        apiClient.defaults.adapter = async (config) => {
+            apiCalls += 1;
+
+            if (apiCalls === 1) {
+                rejectWithStatus(config, 401);
+            }
+
+            return response(config, 200, { ok: true });
+        };
+        authSessionClient.defaults.adapter = async (config) => {
+            pendingKey = requestData(config).idempotency_key;
+
+            await expect(getStoredAuthSession()).resolves.toMatchObject({
+                pendingRefresh: {
+                    idempotencyKey: pendingKey,
+                    refreshToken: OLD_SESSION.refreshToken,
+                },
+            });
+
+            return response(config, 200, REFRESH_RESPONSE);
+        };
+
+        await apiClient.get("/offers");
+
+        expect(typeof pendingKey).toBe("string");
+    });
+
+    it("reuses a pending idempotency key for the same old refresh token", async () => {
+        const pendingIdempotencyKey = "stored-refresh-attempt-key";
+        let apiCalls = 0;
+        await saveAuthSession({
+            ...OLD_SESSION,
+            pendingRefresh: {
+                idempotencyKey: pendingIdempotencyKey,
+                refreshToken: OLD_SESSION.refreshToken,
+                createdAt: 1_800_000_000_100,
+            },
+        });
+
+        apiClient.defaults.adapter = async (config) => {
+            apiCalls += 1;
+
+            if (apiCalls === 1) {
+                rejectWithStatus(config, 401);
+            }
+
+            return response(config, 200, { ok: true });
+        };
+        authSessionClient.defaults.adapter = async (config) => {
+            expect(requestData(config)).toMatchObject({
+                refresh_token: OLD_SESSION.refreshToken,
+                idempotency_key: pendingIdempotencyKey,
+            });
+            return response(config, 200, REFRESH_RESPONSE);
+        };
+
+        await apiClient.get("/offers");
     });
 
     it("shares one refresh across five parallel 401 responses", async () => {
@@ -234,11 +318,14 @@ describe("apiClient automatic refresh", () => {
         expect(unauthorizedHandler).toHaveBeenCalledTimes(1);
     });
 
-    it("keeps the session when refresh returns 503", async () => {
+    it("keeps pending refresh when refresh returns 503", async () => {
+        let pendingKey: unknown;
+
         apiClient.defaults.adapter = async (config) => {
             rejectWithStatus(config, 401);
         };
         authSessionClient.defaults.adapter = async (config) => {
+            pendingKey = requestData(config).idempotency_key;
             rejectWithStatus(
                 config,
                 503,
@@ -254,7 +341,47 @@ describe("apiClient automatic refresh", () => {
             response: { status: 503 },
         });
 
-        await expect(getStoredAuthSession()).resolves.toEqual(OLD_SESSION);
+        await expect(getStoredAuthSession()).resolves.toMatchObject({
+            ...OLD_SESSION,
+            pendingRefresh: {
+                idempotencyKey: pendingKey,
+                refreshToken: OLD_SESSION.refreshToken,
+            },
+        });
+        expect(unauthorizedHandler).not.toHaveBeenCalled();
+    });
+
+    it("keeps pending refresh when storing rotated tokens fails", async () => {
+        let pendingKey: unknown;
+
+        apiClient.defaults.adapter = async (config) => {
+            rejectWithStatus(config, 401);
+        };
+        authSessionClient.defaults.adapter = async (config) => {
+            pendingKey = requestData(config).idempotency_key;
+            return response(config, 200, REFRESH_RESPONSE);
+        };
+        secureStore.setItemAsync.mockImplementation(
+            async (key: string, value: string) => {
+                if (value.includes(REFRESH_RESPONSE.access_token)) {
+                    throw new Error("secure storage unavailable");
+                }
+
+                secureStore.values.set(key, value);
+            },
+        );
+
+        await expect(apiClient.get("/offers")).rejects.toThrow(
+            "secure storage unavailable",
+        );
+
+        await expect(getStoredAuthSession()).resolves.toMatchObject({
+            ...OLD_SESSION,
+            pendingRefresh: {
+                idempotencyKey: pendingKey,
+                refreshToken: OLD_SESSION.refreshToken,
+            },
+        });
         expect(unauthorizedHandler).not.toHaveBeenCalled();
     });
 
@@ -283,7 +410,12 @@ describe("apiClient automatic refresh", () => {
             }
         });
 
-        await expect(getStoredAuthSession()).resolves.toEqual(OLD_SESSION);
+        await expect(getStoredAuthSession()).resolves.toMatchObject({
+            ...OLD_SESSION,
+            pendingRefresh: {
+                refreshToken: OLD_SESSION.refreshToken,
+            },
+        });
         expect(unauthorizedHandler).not.toHaveBeenCalled();
     });
 
