@@ -162,6 +162,15 @@ npm run generate:api
 Die generierte Datei unter `mobile/src/shared/api/generated/` darf nicht
 manuell bearbeitet werden.
 
+Aktueller Auth-Refresh-Vertrag:
+
+- `POST /api/auth/token/refresh` erwartet `refresh_token` und den
+  verpflichtenden `idempotency_key`.
+- Der Mobile Client speichert einen Pending-Idempotency-Key, bis der
+  Refresh-Versuch vollständig verarbeitet wurde.
+- Das Backend speichert Refresh Tokens und Idempotency-Keys nur gehasht, nie
+  im Klartext.
+
 ## Repository-Struktur
 
 ```text

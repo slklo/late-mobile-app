@@ -456,6 +456,7 @@ describe("apiClient automatic refresh", () => {
         await expect(
             apiClient.post("/auth/token/refresh", {
                 refresh_token: OLD_SESSION.refreshToken,
+                idempotency_key: "direct-refresh-attempt-key",
             }),
         ).rejects.toMatchObject({ response: { status: 401 } });
 

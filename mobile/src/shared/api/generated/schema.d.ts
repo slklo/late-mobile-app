@@ -89,6 +89,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/token/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refresh Access Token */
+        post: operations["refresh_access_token_api_auth_token_refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Logout */
+        post: operations["logout_api_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/me/profile": {
         parameters: {
             query?: never;
@@ -170,12 +204,18 @@ export interface components {
         AuthSessionResponse: {
             /** Access Token */
             access_token: string;
+            /** Refresh Token */
+            refresh_token: string;
             /**
              * Token Type
              * @default bearer
              * @constant
              */
             token_type: "bearer";
+            /** Access Expires In Seconds */
+            access_expires_in_seconds: number;
+            /** Refresh Expires In Seconds */
+            refresh_expires_in_seconds: number;
             user: components["schemas"]["UserRead"];
             next_step: components["schemas"]["AuthNextStep"];
         };
@@ -230,6 +270,11 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** LogoutRequest */
+        LogoutRequest: {
+            /** Refresh Token */
+            refresh_token: string;
+        };
         /** OfferRead */
         OfferRead: {
             /** Id */
@@ -260,6 +305,30 @@ export interface components {
             is_active: boolean;
             restaurant: components["schemas"]["RestaurantPreview"];
             category: components["schemas"]["CategoryPreview"];
+        };
+        /** RefreshTokenRequest */
+        RefreshTokenRequest: {
+            /** Refresh Token */
+            refresh_token: string;
+            /** Idempotency Key */
+            idempotency_key: string;
+        };
+        /** RefreshTokenResponse */
+        RefreshTokenResponse: {
+            /** Access Token */
+            access_token: string;
+            /** Refresh Token */
+            refresh_token: string;
+            /**
+             * Token Type
+             * @default bearer
+             * @constant
+             */
+            token_type: "bearer";
+            /** Access Expires In Seconds */
+            access_expires_in_seconds: number;
+            /** Refresh Expires In Seconds */
+            refresh_expires_in_seconds: number;
         };
         /** RestaurantPreview */
         RestaurantPreview: {
@@ -465,6 +534,70 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AuthSessionResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refresh_access_token_api_auth_token_refresh_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefreshTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefreshTokenResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    logout_api_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LogoutRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
