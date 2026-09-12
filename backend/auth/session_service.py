@@ -28,6 +28,8 @@ class SessionServiceConfig:
     access_token_expire_minutes: int
     refresh_token_expire_days: int
     refresh_session_absolute_lifetime_days: int
+    refresh_session_cleanup_retention_days: int
+    refresh_session_cleanup_batch_size: int
     refresh_token_bytes: int
     refresh_rotation_grace_seconds: int = 30
 
@@ -45,6 +47,16 @@ class SessionServiceConfig:
                 "refresh_session_absolute_lifetime_days must be greater "
                 "than zero",
             )
+        if self.refresh_session_cleanup_retention_days < 0:
+            raise ValueError(
+                "refresh_session_cleanup_retention_days must not be "
+                "negative",
+            )
+        if self.refresh_session_cleanup_batch_size <= 0:
+            raise ValueError(
+                "refresh_session_cleanup_batch_size must be greater than "
+                "zero",
+            )
         if self.refresh_token_bytes < 32:
             raise ValueError("refresh_token_bytes must be at least 32")
         if self.refresh_rotation_grace_seconds < 0:
@@ -61,6 +73,12 @@ class SessionServiceConfig:
             refresh_token_expire_days=settings.refresh_token_expire_days,
             refresh_session_absolute_lifetime_days=(
                 settings.refresh_session_absolute_lifetime_days
+            ),
+            refresh_session_cleanup_retention_days=(
+                settings.refresh_session_cleanup_retention_days
+            ),
+            refresh_session_cleanup_batch_size=(
+                settings.refresh_session_cleanup_batch_size
             ),
             refresh_token_bytes=settings.refresh_token_bytes,
             refresh_rotation_grace_seconds=(
@@ -290,6 +308,50 @@ class SessionService:
             raise
 
         return affected
+
+    def cleanup_sessions(
+        self,
+        *,
+        now: datetime | None = None,
+        retention_days: int | None = None,
+        batch_size: int | None = None,
+    ) -> int:
+        retention_days = (
+            self.config.refresh_session_cleanup_retention_days
+            if retention_days is None
+            else retention_days
+        )
+        batch_size = (
+            self.config.refresh_session_cleanup_batch_size
+            if batch_size is None
+            else batch_size
+        )
+
+        if retention_days < 0:
+            raise ValueError("retention_days must not be negative")
+        if batch_size <= 0:
+            raise ValueError("batch_size must be greater than zero")
+
+        now = self._as_aware_utc(now or datetime.now(timezone.utc))
+        cutoff = now - timedelta(days=retention_days)
+
+        try:
+            candidate_ids = self.refresh_sessions.list_cleanup_candidate_ids(
+                cutoff=cutoff,
+                limit=batch_size,
+            )
+            self.refresh_sessions.clear_replaced_by_references(
+                candidate_ids,
+            )
+            deleted = self.refresh_sessions.delete_by_ids(candidate_ids)
+            self.db.commit()
+        except OperationalError as exc:
+            self._raise_service_unavailable(exc)
+        except Exception:
+            self.db.rollback()
+            raise
+
+        return deleted
 
     def _rotate_session(
         self,

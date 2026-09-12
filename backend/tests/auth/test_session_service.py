@@ -30,6 +30,8 @@ TEST_CONFIG = SessionServiceConfig(
     access_token_expire_minutes=15,
     refresh_token_expire_days=30,
     refresh_session_absolute_lifetime_days=90,
+    refresh_session_cleanup_retention_days=30,
+    refresh_session_cleanup_batch_size=500,
     refresh_token_bytes=32,
 )
 IDEMPOTENCY_KEY = "refresh-attempt-key-123"
@@ -158,6 +160,8 @@ def test_issue_session_caps_expires_at_at_absolute_lifetime(
         access_token_expire_minutes=15,
         refresh_token_expire_days=30,
         refresh_session_absolute_lifetime_days=10,
+        refresh_session_cleanup_retention_days=30,
+        refresh_session_cleanup_batch_size=500,
         refresh_token_bytes=32,
     )
 
@@ -453,6 +457,8 @@ def test_zero_second_grace_treats_rotated_token_as_outside_grace(
         access_token_expire_minutes=15,
         refresh_token_expire_days=30,
         refresh_session_absolute_lifetime_days=90,
+        refresh_session_cleanup_retention_days=30,
+        refresh_session_cleanup_batch_size=500,
         refresh_token_bytes=32,
         refresh_rotation_grace_seconds=0,
     )
@@ -730,6 +736,221 @@ def test_revoke_family_returns_number_of_newly_revoked_sessions(
 
     assert first_result == 1
     assert second_result == 0
+
+
+def test_cleanup_sessions_deletes_only_old_terminal_sessions(
+    session_service: tuple[
+        SessionService,
+        Session,
+        RefreshSessionRepository,
+        User,
+    ],
+) -> None:
+    service, db, refresh_sessions, user = session_service
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=30)
+    old_revoked = RefreshSession(
+        family_id=uuid4(),
+        user_id=user.id,
+        token_hash="a" * 64,
+        expires_at=now + timedelta(days=10),
+        absolute_expires_at=now + timedelta(days=60),
+        revoked_at=cutoff - timedelta(seconds=1),
+    )
+    old_expired = RefreshSession(
+        family_id=uuid4(),
+        user_id=user.id,
+        token_hash="b" * 64,
+        expires_at=cutoff - timedelta(seconds=1),
+        absolute_expires_at=now + timedelta(days=60),
+    )
+    old_absolute_expired = RefreshSession(
+        family_id=uuid4(),
+        user_id=user.id,
+        token_hash="c" * 64,
+        expires_at=now + timedelta(days=10),
+        absolute_expires_at=cutoff - timedelta(seconds=1),
+    )
+    fresh_revoked = RefreshSession(
+        family_id=uuid4(),
+        user_id=user.id,
+        token_hash="d" * 64,
+        expires_at=now + timedelta(days=10),
+        absolute_expires_at=now + timedelta(days=60),
+        revoked_at=now - timedelta(days=1),
+    )
+    active = RefreshSession(
+        family_id=uuid4(),
+        user_id=user.id,
+        token_hash="e" * 64,
+        expires_at=now + timedelta(days=10),
+        absolute_expires_at=now + timedelta(days=60),
+    )
+    db.add_all(
+        [
+            old_revoked,
+            old_expired,
+            old_absolute_expired,
+            fresh_revoked,
+            active,
+        ],
+    )
+    db.commit()
+
+    deleted = service.cleanup_sessions(
+        now=now,
+        retention_days=30,
+        batch_size=10,
+    )
+
+    assert deleted == 3
+    assert refresh_sessions.get_by_id(old_revoked.id) is None
+    assert refresh_sessions.get_by_id(old_expired.id) is None
+    assert refresh_sessions.get_by_id(old_absolute_expired.id) is None
+    assert refresh_sessions.get_by_id(fresh_revoked.id) is not None
+    assert refresh_sessions.get_by_id(active.id) is not None
+
+
+def test_cleanup_sessions_respects_batch_limit_and_is_idempotent(
+    session_service: tuple[
+        SessionService,
+        Session,
+        RefreshSessionRepository,
+        User,
+    ],
+) -> None:
+    service, db, refresh_sessions, user = session_service
+    now = datetime.now(timezone.utc)
+    sessions = [
+        RefreshSession(
+            family_id=uuid4(),
+            user_id=user.id,
+            token_hash=f"{index:064x}",
+            expires_at=now - timedelta(days=31),
+            absolute_expires_at=now + timedelta(days=60),
+        )
+        for index in range(3)
+    ]
+    db.add_all(sessions)
+    db.commit()
+
+    first_deleted = service.cleanup_sessions(
+        now=now,
+        retention_days=30,
+        batch_size=2,
+    )
+    second_deleted = service.cleanup_sessions(
+        now=now,
+        retention_days=30,
+        batch_size=2,
+    )
+    third_deleted = service.cleanup_sessions(
+        now=now,
+        retention_days=30,
+        batch_size=2,
+    )
+
+    assert first_deleted == 2
+    assert second_deleted == 1
+    assert third_deleted == 0
+    assert [
+        refresh_sessions.get_by_id(refresh_session.id)
+        for refresh_session in sessions
+    ] == [None, None, None]
+
+
+def test_cleanup_sessions_clears_replaced_by_references_before_delete(
+    session_service: tuple[
+        SessionService,
+        Session,
+        RefreshSessionRepository,
+        User,
+    ],
+) -> None:
+    service, db, refresh_sessions, user = session_service
+    now = datetime.now(timezone.utc)
+    deleted_successor = RefreshSession(
+        family_id=uuid4(),
+        user_id=user.id,
+        token_hash="a" * 64,
+        expires_at=now - timedelta(days=31),
+        absolute_expires_at=now - timedelta(days=31),
+    )
+    fresh_referrer = RefreshSession(
+        family_id=uuid4(),
+        user_id=user.id,
+        token_hash="b" * 64,
+        expires_at=now + timedelta(days=10),
+        absolute_expires_at=now + timedelta(days=60),
+    )
+    db.add_all([deleted_successor, fresh_referrer])
+    db.flush()
+    fresh_referrer.replaced_by_id = deleted_successor.id
+    db.commit()
+
+    deleted = service.cleanup_sessions(
+        now=now,
+        retention_days=30,
+        batch_size=10,
+    )
+
+    assert deleted == 1
+    assert refresh_sessions.get_by_id(deleted_successor.id) is None
+    db.refresh(fresh_referrer)
+    assert fresh_referrer.replaced_by_id is None
+
+
+def test_cleanup_sessions_rejects_invalid_limits(
+    session_service: tuple[
+        SessionService,
+        Session,
+        RefreshSessionRepository,
+        User,
+    ],
+) -> None:
+    service, _, _, _ = session_service
+
+    with pytest.raises(ValueError, match="retention_days"):
+        service.cleanup_sessions(retention_days=-1)
+
+    with pytest.raises(ValueError, match="batch_size"):
+        service.cleanup_sessions(batch_size=0)
+
+
+def test_cleanup_database_failure_is_translated_without_details(
+    session_service: tuple[
+        SessionService,
+        Session,
+        RefreshSessionRepository,
+        User,
+    ],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service, _, refresh_sessions, _ = session_service
+    database_detail = "cleanup statement must stay private"
+
+    def fail_cleanup_candidates(
+        *,
+        cutoff: datetime,
+        limit: int,
+    ) -> list[UUID]:
+        raise OperationalError(
+            "SELECT id FROM auth_refresh_sessions",
+            {},
+            RuntimeError(database_detail),
+        )
+
+    monkeypatch.setattr(
+        refresh_sessions,
+        "list_cleanup_candidate_ids",
+        fail_cleanup_candidates,
+    )
+
+    with pytest.raises(AuthenticationServiceUnavailableError) as exc_info:
+        service.cleanup_sessions()
+
+    assert exc_info.value.code == "AUTHENTICATION_SERVICE_UNAVAILABLE"
+    assert database_detail not in str(exc_info.value)
 
 
 def test_refresh_database_failure_is_translated_without_details(

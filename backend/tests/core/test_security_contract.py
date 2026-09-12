@@ -229,6 +229,38 @@ def test_refresh_session_absolute_lifetime_settings_validate_bounds() -> None:
         )
 
 
+def test_refresh_session_cleanup_settings_validate_bounds() -> None:
+    settings = Settings(
+        **{
+            **VALID_SETTINGS,
+            "refresh_session_cleanup_retention_days": 0,
+            "refresh_session_cleanup_batch_size": 1,
+        },
+        _env_file=None,
+    )
+
+    assert settings.refresh_session_cleanup_retention_days == 0
+    assert settings.refresh_session_cleanup_batch_size == 1
+
+    with pytest.raises(ValidationError):
+        Settings(
+            **{
+                **VALID_SETTINGS,
+                "refresh_session_cleanup_retention_days": -1,
+            },
+            _env_file=None,
+        )
+
+    with pytest.raises(ValidationError):
+        Settings(
+            **{
+                **VALID_SETTINGS,
+                "refresh_session_cleanup_batch_size": 0,
+            },
+            _env_file=None,
+        )
+
+
 def test_refresh_idempotency_key_max_length_cannot_be_below_minimum() -> None:
     with pytest.raises(ValidationError):
         Settings(

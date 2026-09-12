@@ -298,6 +298,106 @@ def test_revoke_family_revokes_every_unrevoked_family_session(
     assert other_family.revoked_at is None
 
 
+def test_list_cleanup_candidate_ids_returns_only_old_terminal_sessions(
+    repository: RefreshSessionRepository,
+    db_session: Session,
+) -> None:
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=30)
+    old_revoked = make_refresh_session(
+        token_hash="a" * 64,
+        expires_at=now + timedelta(days=10),
+        revoked_at=cutoff - timedelta(seconds=1),
+    )
+    old_expired = make_refresh_session(
+        token_hash="b" * 64,
+        expires_at=cutoff - timedelta(seconds=1),
+        absolute_expires_at=now + timedelta(days=10),
+    )
+    old_absolute_expired = make_refresh_session(
+        token_hash="c" * 64,
+        expires_at=now + timedelta(days=10),
+        absolute_expires_at=cutoff - timedelta(seconds=1),
+    )
+    fresh_revoked = make_refresh_session(
+        token_hash="d" * 64,
+        expires_at=now + timedelta(days=10),
+        revoked_at=now - timedelta(days=1),
+    )
+    active = make_refresh_session(
+        token_hash="e" * 64,
+        expires_at=now + timedelta(days=10),
+        absolute_expires_at=now + timedelta(days=20),
+    )
+    db_session.add_all(
+        [
+            old_revoked,
+            old_expired,
+            old_absolute_expired,
+            fresh_revoked,
+            active,
+        ],
+    )
+    db_session.flush()
+
+    result = repository.list_cleanup_candidate_ids(
+        cutoff=cutoff,
+        limit=10,
+    )
+
+    assert set(result) == {
+        old_revoked.id,
+        old_expired.id,
+        old_absolute_expired.id,
+    }
+
+
+def test_list_cleanup_candidate_ids_respects_batch_limit(
+    repository: RefreshSessionRepository,
+    db_session: Session,
+) -> None:
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=30)
+    sessions = [
+        make_refresh_session(
+            token_hash=f"{index:064x}",
+            expires_at=cutoff - timedelta(days=1),
+        )
+        for index in range(4)
+    ]
+    db_session.add_all(sessions)
+    db_session.flush()
+
+    result = repository.list_cleanup_candidate_ids(
+        cutoff=cutoff,
+        limit=2,
+    )
+
+    assert len(result) == 2
+
+
+def test_delete_by_ids_clears_self_references_before_delete(
+    repository: RefreshSessionRepository,
+    db_session: Session,
+) -> None:
+    target = make_refresh_session(token_hash="f" * 64)
+    referrer = make_refresh_session(token_hash="a" * 64)
+    db_session.add_all([target, referrer])
+    db_session.flush()
+    referrer.replaced_by_id = target.id
+    db_session.flush()
+
+    cleared = repository.clear_replaced_by_references([target.id])
+    deleted = repository.delete_by_ids([target.id])
+    db_session.flush()
+    db_session.refresh(referrer)
+
+    assert cleared == 1
+    assert deleted == 1
+    assert referrer.replaced_by_id is None
+    assert repository.get_by_id(target.id) is None
+
+
 def test_get_active_by_token_hash_for_update_uses_active_filters_and_lock() -> None:
     db = MagicMock(spec=Session)
     db.scalars.return_value.one_or_none.return_value = None

@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import Select
 
@@ -107,6 +107,60 @@ class RefreshSessionRepository:
                 RefreshSession.revoked_at.is_(None),
             )
             .values(revoked_at=revoked_at)
+            .execution_options(synchronize_session="fetch")
+        )
+        result = self.db.execute(stmt)
+        return result.rowcount
+
+    def list_cleanup_candidate_ids(
+        self,
+        *,
+        cutoff: datetime,
+        limit: int,
+    ) -> list[UUID]:
+        if limit <= 0:
+            return []
+
+        stmt = (
+            select(RefreshSession.id)
+            .where(
+                or_(
+                    RefreshSession.revoked_at <= cutoff,
+                    RefreshSession.expires_at <= cutoff,
+                    RefreshSession.absolute_expires_at <= cutoff,
+                ),
+            )
+            .order_by(
+                RefreshSession.created_at.asc(),
+                RefreshSession.id.asc(),
+            )
+            .limit(limit)
+        )
+        return list(self.db.scalars(stmt).all())
+
+    def clear_replaced_by_references(
+        self,
+        session_ids: list[UUID],
+    ) -> int:
+        if not session_ids:
+            return 0
+
+        stmt = (
+            update(RefreshSession)
+            .where(RefreshSession.replaced_by_id.in_(session_ids))
+            .values(replaced_by_id=None)
+            .execution_options(synchronize_session="fetch")
+        )
+        result = self.db.execute(stmt)
+        return result.rowcount
+
+    def delete_by_ids(self, session_ids: list[UUID]) -> int:
+        if not session_ids:
+            return 0
+
+        stmt = (
+            delete(RefreshSession)
+            .where(RefreshSession.id.in_(session_ids))
             .execution_options(synchronize_session="fetch")
         )
         result = self.db.execute(stmt)
