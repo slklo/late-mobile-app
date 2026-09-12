@@ -29,6 +29,7 @@ import {
     removeAccessToken,
     removeAuthSession,
     saveAuthSession,
+    toStoredAuthSession,
     type StoredAuthSession,
 } from "./tokenStorage";
 
@@ -61,7 +62,6 @@ beforeEach(() => {
     secureStore.values.clear();
     vi.clearAllMocks();
 });
-
 
 describe("auth session storage", () => {
     it("stores and restores the token pair as one versioned JSON value", async () => {
@@ -163,5 +163,22 @@ describe("auth session storage", () => {
 
         expect(key).toHaveLength(64);
         expect(key).toMatch(/^[0-9a-f]+$/);
+    });
+
+    it("stores shortened refresh expiry from the API response", () => {
+        const dateNow = vi.spyOn(Date, "now").mockReturnValue(
+            1_800_000_000_000,
+        );
+
+        const session = toStoredAuthSession({
+            access_token: "access-token",
+            refresh_token: "short-lived-refresh-token",
+            token_type: "bearer",
+            access_expires_in_seconds: 900,
+            refresh_expires_in_seconds: 60,
+        });
+
+        expect(session.refreshExpiresAt).toBe(1_800_000_060_000);
+        dateNow.mockRestore();
     });
 });

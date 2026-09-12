@@ -119,7 +119,12 @@ class SessionService:
         try:
             self.refresh_sessions.add(refresh_session)
             self.db.flush()
-            tokens = self._build_tokens(user.id, refresh_token)
+            tokens = self._build_tokens(
+                user.id,
+                refresh_token,
+                refresh_expires_at=expires_at,
+                now=now,
+            )
             self.db.commit()
         except OperationalError as exc:
             self._raise_service_unavailable(exc)
@@ -328,13 +333,28 @@ class SessionService:
             idempotency_key_hash=idempotency_key_hash,
         )
 
-        return self._build_tokens(user.id, next_refresh_token)
+        return self._build_tokens(
+            user.id,
+            next_refresh_token,
+            refresh_expires_at=next_session.expires_at,
+            now=now,
+        )
 
     def _build_tokens(
         self,
         user_id: int,
         refresh_token: str,
+        *,
+        refresh_expires_at: datetime,
+        now: datetime,
     ) -> AuthSessionTokens:
+        refresh_expires_at = self._as_aware_utc(refresh_expires_at)
+        now = self._as_aware_utc(now)
+        refresh_expires_in_seconds = max(
+            0,
+            int((refresh_expires_at - now).total_seconds()),
+        )
+
         return AuthSessionTokens(
             access_token=create_access_token(
                 user_id,
@@ -346,9 +366,7 @@ class SessionService:
             access_expires_in_seconds=(
                 self.config.access_token_expire_minutes * 60
             ),
-            refresh_expires_in_seconds=(
-                self.config.refresh_token_expire_days * 24 * 60 * 60
-            ),
+            refresh_expires_in_seconds=refresh_expires_in_seconds,
         )
 
     @staticmethod

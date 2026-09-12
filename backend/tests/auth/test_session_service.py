@@ -168,6 +168,7 @@ def test_issue_session_caps_expires_at_at_absolute_lifetime(
     )
     assert stored is not None
     assert stored.expires_at == stored.absolute_expires_at
+    assert issued.refresh_expires_in_seconds == 10 * 24 * 60 * 60
 
 
 def test_rotation_uses_sliding_expiration_when_absolute_lifetime_allows_it(
@@ -195,6 +196,7 @@ def test_rotation_uses_sliding_expiration_when_absolute_lifetime_allows_it(
         before + timedelta(days=30) - timedelta(seconds=1)
     )
     assert new_session.expires_at < new_session.absolute_expires_at
+    assert rotated.refresh_expires_in_seconds == 30 * 24 * 60 * 60
 
 
 def test_rotation_caps_expires_at_when_absolute_lifetime_is_closer(
@@ -231,6 +233,38 @@ def test_rotation_caps_expires_at_when_absolute_lifetime_is_closer(
     assert new_session.expires_at.replace(
         tzinfo=timezone.utc,
     ) == absolute_expires_at
+    assert rotated.refresh_expires_in_seconds <= 24 * 60 * 60
+    assert rotated.refresh_expires_in_seconds >= 24 * 60 * 60 - 1
+
+
+def test_refresh_response_never_exceeds_absolute_remaining_lifetime(
+    session_service: tuple[
+        SessionService,
+        Session,
+        RefreshSessionRepository,
+        User,
+    ],
+) -> None:
+    service, db, refresh_sessions, user = session_service
+    issued = service.issue_session(user)
+    current = refresh_sessions.get_by_token_hash(
+        hash_refresh_token(issued.refresh_token),
+    )
+    assert current is not None
+    absolute_expires_at = datetime.now(timezone.utc) + timedelta(hours=2)
+    current.absolute_expires_at = absolute_expires_at
+    current.expires_at = absolute_expires_at
+    db.commit()
+
+    before = datetime.now(timezone.utc)
+    rotated = service.refresh_session(
+        issued.refresh_token,
+        IDEMPOTENCY_KEY,
+    )
+
+    assert rotated.refresh_expires_in_seconds <= int(
+        (absolute_expires_at - before).total_seconds(),
+    )
 
 
 def test_refresh_session_uses_locking_repository_lookup(
@@ -631,7 +665,13 @@ def test_failed_rotation_rolls_back_both_generations(
     assert old_session is not None
     family_id = old_session.family_id
 
-    def fail_token_building(user_id: int, refresh_token: str) -> None:
+    def fail_token_building(
+        user_id: int,
+        refresh_token: str,
+        *,
+        refresh_expires_at: datetime,
+        now: datetime,
+    ) -> None:
         raise RuntimeError("token building failed")
 
     monkeypatch.setattr(service, "_build_tokens", fail_token_building)
