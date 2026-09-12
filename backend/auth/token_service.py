@@ -8,6 +8,10 @@ from jwt.exceptions import InvalidTokenError
 from core.config import settings
 
 
+def _jwt_secret_value() -> str:
+    return settings.jwt_secret.get_secret_value()
+
+
 def create_access_token(
     user_id: int,
     expires_minutes: int | None = None,
@@ -28,7 +32,7 @@ def create_access_token(
 
     return jwt.encode(
         payload,
-        settings.jwt_secret,
+        _jwt_secret_value(),
         algorithm=settings.jwt_algorithm,
     )
 
@@ -52,7 +56,7 @@ def decode_access_token(token: str) -> int | None:
     try:
         payload = jwt.decode(
             token,
-            settings.jwt_secret,
+            _jwt_secret_value(),
             algorithms=[settings.jwt_algorithm],
         )
         subject = payload.get("sub")
