@@ -29,6 +29,7 @@ from users.repository import UserRepository
 TEST_CONFIG = SessionServiceConfig(
     access_token_expire_minutes=15,
     refresh_token_expire_days=30,
+    refresh_session_absolute_lifetime_days=90,
     refresh_token_bytes=32,
 )
 IDEMPOTENCY_KEY = "refresh-attempt-key-123"
@@ -323,6 +324,7 @@ def test_zero_second_grace_treats_rotated_token_as_outside_grace(
     service.config = SessionServiceConfig(
         access_token_expire_minutes=15,
         refresh_token_expire_days=30,
+        refresh_session_absolute_lifetime_days=90,
         refresh_token_bytes=32,
         refresh_rotation_grace_seconds=0,
     )
@@ -365,6 +367,7 @@ def test_expired_refresh_token_is_rejected(
         user_id=user.id,
         token_hash=hash_refresh_token(refresh_token),
         expires_at=datetime.now(timezone.utc) - timedelta(seconds=1),
+        absolute_expires_at=datetime.now(timezone.utc) + timedelta(days=90),
     )
     refresh_sessions.add(expired_session)
     db.commit()
@@ -392,6 +395,7 @@ def test_revoked_refresh_token_without_rotation_is_rejected_without_family_revok
         user_id=user.id,
         token_hash=hash_refresh_token(revoked_token),
         expires_at=datetime.now(timezone.utc) + timedelta(days=30),
+        absolute_expires_at=datetime.now(timezone.utc) + timedelta(days=90),
         revoked_at=datetime.now(timezone.utc),
     )
     successor = RefreshSession(
@@ -399,6 +403,7 @@ def test_revoked_refresh_token_without_rotation_is_rejected_without_family_revok
         user_id=user.id,
         token_hash=hash_refresh_token(successor_token),
         expires_at=datetime.now(timezone.utc) + timedelta(days=30),
+        absolute_expires_at=datetime.now(timezone.utc) + timedelta(days=90),
     )
     refresh_sessions.add(revoked_session)
     refresh_sessions.add(successor)

@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = Field(default=30, gt=0)
+    refresh_session_absolute_lifetime_days: int = Field(default=90, gt=0)
     refresh_token_bytes: int = Field(default=32, ge=32)
     refresh_rotation_grace_seconds: int = Field(default=30, ge=0)
     refresh_idempotency_key_min_length: int = Field(default=16, ge=8)

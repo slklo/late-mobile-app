@@ -27,6 +27,7 @@ from users.repository import UserRepository
 class SessionServiceConfig:
     access_token_expire_minutes: int
     refresh_token_expire_days: int
+    refresh_session_absolute_lifetime_days: int
     refresh_token_bytes: int
     refresh_rotation_grace_seconds: int = 30
 
@@ -38,6 +39,11 @@ class SessionServiceConfig:
         if self.refresh_token_expire_days <= 0:
             raise ValueError(
                 "refresh_token_expire_days must be greater than zero",
+            )
+        if self.refresh_session_absolute_lifetime_days <= 0:
+            raise ValueError(
+                "refresh_session_absolute_lifetime_days must be greater "
+                "than zero",
             )
         if self.refresh_token_bytes < 32:
             raise ValueError("refresh_token_bytes must be at least 32")
@@ -53,6 +59,9 @@ class SessionServiceConfig:
                 settings.access_token_expire_minutes
             ),
             refresh_token_expire_days=settings.refresh_token_expire_days,
+            refresh_session_absolute_lifetime_days=(
+                settings.refresh_session_absolute_lifetime_days
+            ),
             refresh_token_bytes=settings.refresh_token_bytes,
             refresh_rotation_grace_seconds=(
                 settings.refresh_rotation_grace_seconds
@@ -87,6 +96,9 @@ class SessionService:
             raise InvalidRefreshTokenError()
 
         now = datetime.now(timezone.utc)
+        absolute_expires_at = now + timedelta(
+            days=self.config.refresh_session_absolute_lifetime_days,
+        )
         refresh_token = generate_refresh_token(
             self.config.refresh_token_bytes,
         )
@@ -97,6 +109,7 @@ class SessionService:
             token_hash=hash_refresh_token(refresh_token),
             expires_at=now
             + timedelta(days=self.config.refresh_token_expire_days),
+            absolute_expires_at=absolute_expires_at,
         )
 
         try:
@@ -275,6 +288,7 @@ class SessionService:
             token_hash=hash_refresh_token(next_refresh_token),
             expires_at=now
             + timedelta(days=self.config.refresh_token_expire_days),
+            absolute_expires_at=current.absolute_expires_at,
         )
 
         self.refresh_sessions.add(next_session)

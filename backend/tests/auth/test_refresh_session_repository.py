@@ -41,14 +41,21 @@ def make_refresh_session(
     token_hash: str,
     family_id: UUID | None = None,
     expires_at: datetime | None = None,
+    absolute_expires_at: datetime | None = None,
     revoked_at: datetime | None = None,
 ) -> RefreshSession:
+    effective_expires_at = (
+        expires_at
+        or datetime.now(timezone.utc) + timedelta(hours=1)
+    )
+
     return RefreshSession(
         family_id=family_id or uuid4(),
         user_id=1,
         token_hash=token_hash,
-        expires_at=expires_at
-        or datetime.now(timezone.utc) + timedelta(hours=1),
+        expires_at=effective_expires_at,
+        absolute_expires_at=absolute_expires_at
+        or effective_expires_at + timedelta(days=60),
         revoked_at=revoked_at,
     )
 

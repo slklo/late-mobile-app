@@ -68,6 +68,36 @@ def test_refresh_rotation_settings_validate_bounds() -> None:
         )
 
 
+def test_refresh_session_absolute_lifetime_settings_validate_bounds() -> None:
+    settings = Settings(
+        **{
+            **VALID_SETTINGS,
+            "refresh_session_absolute_lifetime_days": 90,
+        },
+        _env_file=None,
+    )
+
+    assert settings.refresh_session_absolute_lifetime_days == 90
+
+    with pytest.raises(ValidationError):
+        Settings(
+            **{
+                **VALID_SETTINGS,
+                "refresh_session_absolute_lifetime_days": 0,
+            },
+            _env_file=None,
+        )
+
+    with pytest.raises(ValidationError):
+        Settings(
+            **{
+                **VALID_SETTINGS,
+                "refresh_session_absolute_lifetime_days": -1,
+            },
+            _env_file=None,
+        )
+
+
 def test_refresh_idempotency_key_max_length_cannot_be_below_minimum() -> None:
     with pytest.raises(ValidationError):
         Settings(
