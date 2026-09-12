@@ -99,6 +99,10 @@ class SessionService:
         absolute_expires_at = now + timedelta(
             days=self.config.refresh_session_absolute_lifetime_days,
         )
+        expires_at = self._effective_refresh_expires_at(
+            now=now,
+            absolute_expires_at=absolute_expires_at,
+        )
         refresh_token = generate_refresh_token(
             self.config.refresh_token_bytes,
         )
@@ -107,8 +111,8 @@ class SessionService:
             family_id=uuid4(),
             user_id=user.id,
             token_hash=hash_refresh_token(refresh_token),
-            expires_at=now
-            + timedelta(days=self.config.refresh_token_expire_days),
+            created_at=now,
+            expires_at=expires_at,
             absolute_expires_at=absolute_expires_at,
         )
 
@@ -153,7 +157,13 @@ class SessionService:
                 if existing is None:
                     raise InvalidRefreshTokenError()
 
-                if self._is_rotated(existing):
+                if self._is_absolute_expired(existing, now):
+                    self.refresh_sessions.revoke_family(
+                        existing.family_id,
+                        now,
+                    )
+                    reject_after_commit = True
+                elif self._is_rotated(existing):
                     reject_after_commit = self._handle_rotated_token_reuse(
                         refresh_session=existing,
                         idempotency_key_hash=idempotency_key_hash,
@@ -171,6 +181,12 @@ class SessionService:
                 reject_after_commit = True
             elif current.revoked_at is not None:
                 raise InvalidRefreshTokenError()
+            elif self._is_absolute_expired(current, now):
+                self.refresh_sessions.revoke_family(
+                    current.family_id,
+                    now,
+                )
+                reject_after_commit = True
             elif self._is_expired(current.expires_at, now):
                 raise InvalidRefreshTokenError()
             else:
@@ -281,13 +297,17 @@ class SessionService:
         next_refresh_token = generate_refresh_token(
             self.config.refresh_token_bytes,
         )
+        next_expires_at = self._effective_refresh_expires_at(
+            now=now,
+            absolute_expires_at=current.absolute_expires_at,
+        )
         next_session = RefreshSession(
             id=uuid4(),
             family_id=current.family_id,
             user_id=current.user_id,
             token_hash=hash_refresh_token(next_refresh_token),
-            expires_at=now
-            + timedelta(days=self.config.refresh_token_expire_days),
+            created_at=now,
+            expires_at=next_expires_at,
             absolute_expires_at=current.absolute_expires_at,
         )
 
@@ -335,6 +355,19 @@ class SessionService:
     def _is_rotated(refresh_session: RefreshSession) -> bool:
         return refresh_session.replaced_by_id is not None
 
+    def _effective_refresh_expires_at(
+        self,
+        *,
+        now: datetime,
+        absolute_expires_at: datetime,
+    ) -> datetime:
+        sliding_expires_at = now + timedelta(
+            days=self.config.refresh_token_expire_days,
+        )
+        absolute_expires_at = self._as_aware_utc(absolute_expires_at)
+
+        return min(sliding_expires_at, absolute_expires_at)
+
     def _is_same_grace_retry(
         self,
         *,
@@ -354,10 +387,23 @@ class SessionService:
 
     @staticmethod
     def _is_expired(expires_at: datetime, now: datetime) -> bool:
-        if expires_at.tzinfo is None:
-            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        expires_at = SessionService._as_aware_utc(expires_at)
 
         return expires_at <= now
+
+    def _is_absolute_expired(
+        self,
+        refresh_session: RefreshSession,
+        now: datetime,
+    ) -> bool:
+        return self._is_expired(refresh_session.absolute_expires_at, now)
+
+    @staticmethod
+    def _as_aware_utc(value: datetime) -> datetime:
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+
+        return value.astimezone(timezone.utc)
 
     def _raise_service_unavailable(
         self,

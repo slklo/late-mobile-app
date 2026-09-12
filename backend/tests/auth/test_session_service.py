@@ -95,6 +95,10 @@ def test_issue_session_persists_hash_and_returns_token_pair(
     assert stored.expires_at.replace(tzinfo=timezone.utc) >= (
         before + timedelta(days=30) - timedelta(seconds=1)
     )
+    assert stored.absolute_expires_at.replace(tzinfo=timezone.utc) >= (
+        before + timedelta(days=90) - timedelta(seconds=1)
+    )
+    assert stored.expires_at <= stored.absolute_expires_at
     assert decode_access_token(tokens.access_token) == user.id
     assert tokens.token_type == "bearer"
     assert tokens.access_expires_in_seconds == 15 * 60
@@ -135,8 +139,98 @@ def test_refresh_session_rotates_token_and_links_generations(
         hash_refresh_idempotency_key(IDEMPOTENCY_KEY)
     )
     assert old_session.family_id == new_session.family_id
+    assert old_session.absolute_expires_at == new_session.absolute_expires_at
+    assert new_session.expires_at <= new_session.absolute_expires_at
     assert new_session.revoked_at is None
     assert decode_access_token(rotated.access_token) == user.id
+
+
+def test_issue_session_caps_expires_at_at_absolute_lifetime(
+    session_service: tuple[
+        SessionService,
+        Session,
+        RefreshSessionRepository,
+        User,
+    ],
+) -> None:
+    service, _, refresh_sessions, user = session_service
+    service.config = SessionServiceConfig(
+        access_token_expire_minutes=15,
+        refresh_token_expire_days=30,
+        refresh_session_absolute_lifetime_days=10,
+        refresh_token_bytes=32,
+    )
+
+    issued = service.issue_session(user)
+
+    stored = refresh_sessions.get_by_token_hash(
+        hash_refresh_token(issued.refresh_token),
+    )
+    assert stored is not None
+    assert stored.expires_at == stored.absolute_expires_at
+
+
+def test_rotation_uses_sliding_expiration_when_absolute_lifetime_allows_it(
+    session_service: tuple[
+        SessionService,
+        Session,
+        RefreshSessionRepository,
+        User,
+    ],
+) -> None:
+    service, _, refresh_sessions, user = session_service
+    issued = service.issue_session(user)
+    before = datetime.now(timezone.utc)
+
+    rotated = service.refresh_session(
+        issued.refresh_token,
+        IDEMPOTENCY_KEY,
+    )
+
+    new_session = refresh_sessions.get_by_token_hash(
+        hash_refresh_token(rotated.refresh_token),
+    )
+    assert new_session is not None
+    assert new_session.expires_at.replace(tzinfo=timezone.utc) >= (
+        before + timedelta(days=30) - timedelta(seconds=1)
+    )
+    assert new_session.expires_at < new_session.absolute_expires_at
+
+
+def test_rotation_caps_expires_at_when_absolute_lifetime_is_closer(
+    session_service: tuple[
+        SessionService,
+        Session,
+        RefreshSessionRepository,
+        User,
+    ],
+) -> None:
+    service, db, refresh_sessions, user = session_service
+    issued = service.issue_session(user)
+    current = refresh_sessions.get_by_token_hash(
+        hash_refresh_token(issued.refresh_token),
+    )
+    assert current is not None
+    absolute_expires_at = datetime.now(timezone.utc) + timedelta(days=1)
+    current.absolute_expires_at = absolute_expires_at
+    current.expires_at = absolute_expires_at
+    db.commit()
+
+    rotated = service.refresh_session(
+        issued.refresh_token,
+        IDEMPOTENCY_KEY,
+    )
+
+    new_session = refresh_sessions.get_by_token_hash(
+        hash_refresh_token(rotated.refresh_token),
+    )
+    assert new_session is not None
+    assert new_session.absolute_expires_at.replace(
+        tzinfo=timezone.utc,
+    ) == absolute_expires_at
+    assert new_session.expires_at.replace(
+        tzinfo=timezone.utc,
+    ) == absolute_expires_at
 
 
 def test_refresh_session_uses_locking_repository_lookup(
@@ -350,6 +444,73 @@ def test_zero_second_grace_treats_rotated_token_as_outside_grace(
         )
         is None
     )
+
+
+def test_absolute_expired_refresh_revokes_family_without_new_generation(
+    session_service: tuple[
+        SessionService,
+        Session,
+        RefreshSessionRepository,
+        User,
+    ],
+) -> None:
+    service, db, refresh_sessions, user = session_service
+    issued = service.issue_session(user)
+    current = refresh_sessions.get_by_token_hash(
+        hash_refresh_token(issued.refresh_token),
+    )
+    assert current is not None
+    current.expires_at = datetime.now(timezone.utc) + timedelta(days=1)
+    current.absolute_expires_at = (
+        datetime.now(timezone.utc) - timedelta(seconds=1)
+    )
+    db.commit()
+
+    with pytest.raises(InvalidRefreshTokenError):
+        service.refresh_session(issued.refresh_token, IDEMPOTENCY_KEY)
+
+    family = refresh_sessions.list_by_family_id(current.family_id)
+    assert len(family) == 1
+    assert current.revoked_at is not None
+
+
+def test_absolute_expiration_cannot_be_bypassed_by_grace_retry(
+    session_service: tuple[
+        SessionService,
+        Session,
+        RefreshSessionRepository,
+        User,
+    ],
+) -> None:
+    service, db, refresh_sessions, user = session_service
+    issued = service.issue_session(user)
+    rotated = service.refresh_session(
+        issued.refresh_token,
+        IDEMPOTENCY_KEY,
+    )
+    old_session = refresh_sessions.get_by_token_hash(
+        hash_refresh_token(issued.refresh_token),
+    )
+    new_session = refresh_sessions.get_by_token_hash(
+        hash_refresh_token(rotated.refresh_token),
+    )
+    assert old_session is not None
+    assert new_session is not None
+    old_session.grace_expires_at = (
+        datetime.now(timezone.utc) + timedelta(seconds=30)
+    )
+    old_session.absolute_expires_at = (
+        datetime.now(timezone.utc) - timedelta(seconds=1)
+    )
+    new_session.absolute_expires_at = old_session.absolute_expires_at
+    db.commit()
+
+    with pytest.raises(InvalidRefreshTokenError):
+        service.refresh_session(issued.refresh_token, IDEMPOTENCY_KEY)
+
+    family = refresh_sessions.list_by_family_id(old_session.family_id)
+    assert len(family) == 2
+    assert all(item.revoked_at is not None for item in family)
 
 
 def test_expired_refresh_token_is_rejected(
