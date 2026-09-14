@@ -6,6 +6,10 @@ __pycache__/
 
 venv/
 
+reference-*/
+
+.agents/
+
 .claude/
 
 .vscode/
@@ -17,5 +21,7 @@ node_modules/
 docker-compose.yml
 
 .env
+
+PROJECT_STATUS.md
 
 README.md
