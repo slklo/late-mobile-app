@@ -9,6 +9,9 @@ export default function AppLayout() {
                 gestureEnabled: true,
                 headerShown: false,
             }}
-        />
+        >
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="offers/[offerId]" />
+        </Stack>
     );
 }

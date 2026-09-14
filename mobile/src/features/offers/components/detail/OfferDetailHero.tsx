@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { NativeWindSymbol } from "@/shared/ui/nativewindInterop";
 
@@ -40,6 +41,7 @@ export function OfferDetailHero({
     onBack,
 }: OfferDetailHeroProps) {
     const [isFavorite, setFavorite] = useState(false);
+    const insets = useSafeAreaInsets();
 
     return (
         <View className="relative bg-offer-secondary">
@@ -54,7 +56,10 @@ export function OfferDetailHero({
                 pointerEvents="none"
             />
 
-            <View className="absolute inset-x-4 top-safe-offset-2.5 flex-row justify-between">
+            <View
+                className="absolute inset-x-4 flex-row justify-between"
+                style={{ top: insets.top + 10 }}
+            >
                 <TouchableOpacity
                     accessibilityLabel="Go back"
                     accessibilityRole="button"
