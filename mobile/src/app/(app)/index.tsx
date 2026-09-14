@@ -2,7 +2,6 @@ import { StatusBar } from "expo-status-bar";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
     useCallback,
-    useEffect,
     useMemo,
     useRef,
     useState,
@@ -59,9 +58,12 @@ export default function ExploreScreen() {
         () => getExploreCategories(offers),
         [offers],
     );
+    const activeCategory = categories.includes(selectedCategory)
+        ? selectedCategory
+        : ALL_CATEGORIES;
     const filteredOffers = useMemo(
-        () => filterOffersByCategory(offers, selectedCategory),
-        [offers, selectedCategory],
+        () => filterOffersByCategory(offers, activeCategory),
+        [activeCategory, offers],
     );
     const sections = useMemo(
         () => splitOffersForExplore(filteredOffers),
@@ -85,12 +87,6 @@ export default function ExploreScreen() {
             params: { offerId: String(offer.id) },
         });
     }, [router]);
-
-    useEffect(() => {
-        if (!categories.includes(selectedCategory)) {
-            setSelectedCategory(ALL_CATEGORIES);
-        }
-    }, [categories, selectedCategory]);
 
     if (isLoading) {
         return (
@@ -180,7 +176,7 @@ export default function ExploreScreen() {
                     <ExploreCategoryChips
                         categories={categories}
                         onSelect={setSelectedCategory}
-                        selectedCategory={selectedCategory}
+                        selectedCategory={activeCategory}
                     />
                 </View>
 

@@ -73,7 +73,7 @@ export default function CheckInboxScreen() {
     const setChallenge = useAuthFlowStore((state) => state.setChallenge);
     const clearChallenge = useAuthFlowStore((state) => state.clearChallenge);
     const [code, setCode] = useState("");
-    const [now, setNow] = useState(Date.now());
+    const [now, setNow] = useState(() => Date.now());
     const [isLocked, setLocked] = useState(false);
     const [resentMessage, setResentMessage] = useState<string | null>(null);
     const inputRef = useRef<TextInput>(null);

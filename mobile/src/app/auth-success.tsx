@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import {
     Animated,
     Pressable,
@@ -12,8 +12,8 @@ import { NativeWindAnimatedView } from "@/shared/ui/nativewindInterop";
 
 export default function AuthSuccessScreen() {
     const user = useAuthStore((state) => state.user);
-    const scale = useRef(new Animated.Value(0.6)).current;
-    const opacity = useRef(new Animated.Value(0)).current;
+    const scale = useMemo(() => new Animated.Value(0.6), []);
+    const opacity = useMemo(() => new Animated.Value(0), []);
 
     useEffect(() => {
         Animated.parallel([

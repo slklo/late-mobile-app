@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
     ImageBackground,
     KeyboardAvoidingView,
@@ -32,13 +32,6 @@ export default function WelcomeScreen() {
     const [validationError, setValidationError] = useState<string | null>(
         null,
     );
-
-    useEffect(() => {
-        if (storedEmail) {
-            setEmail(storedEmail);
-            setSheetOpen(true);
-        }
-    }, [storedEmail]);
 
     const requestChallenge = useMutation({
         mutationFn: requestEmailChallenge,

@@ -67,19 +67,27 @@ export default function MagicLinkScreen() {
     }>();
     const user = useAuthStore((state) => state.user);
     const resetFlow = useAuthFlowStore((state) => state.reset);
-    const [error, setError] = useState<string | null>(null);
+    const challengeId = singleParam(params.challenge_id);
+    const token = singleParam(params.token);
+    const linkKey = `${challengeId ?? ""}:${token ?? ""}`;
+    const validationError = (
+        !challengeId ||
+        !token ||
+        !UUID_PATTERN.test(challengeId) ||
+        !TOKEN_PATTERN.test(token)
+    )
+        ? "This sign-in link is incomplete or invalid."
+        : null;
+    const [requestError, setRequestError] = useState<{
+        key: string;
+        message: string;
+    } | null>(null);
+    const error = validationError ?? (
+        requestError?.key === linkKey ? requestError.message : null
+    );
 
     useEffect(() => {
-        const challengeId = singleParam(params.challenge_id);
-        const token = singleParam(params.token);
-
-        if (
-            !challengeId ||
-            !token ||
-            !UUID_PATTERN.test(challengeId) ||
-            !TOKEN_PATTERN.test(token)
-        ) {
-            setError("This sign-in link is incomplete or invalid.");
+        if (validationError || !challengeId || !token) {
             return;
         }
 
@@ -115,17 +123,20 @@ export default function MagicLinkScreen() {
                     }
                 }
 
-                setError(
-                    getApiErrorCode(requestError) === "INVALID_MAGIC_LINK"
+                setRequestError({
+                    key: linkKey,
+                    message: getApiErrorCode(requestError) === (
+                        "INVALID_MAGIC_LINK"
+                    )
                         ? "This sign-in link is invalid, expired, or already used."
                         : "We could not complete sign-in. Please request a new email.",
-                );
+                });
             });
 
         return () => {
             isMounted = false;
         };
-    }, [params.challenge_id, params.token]);
+    }, [challengeId, linkKey, token, validationError]);
 
     const leaveCallback = () => {
         resetFlow();
