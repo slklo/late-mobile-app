@@ -4,7 +4,8 @@ LatePlate ist ein Full-Stack-Prototyp für zeitlich begrenzte, vergünstigte
 Restaurantangebote. Die Expo-App unterstützt aktuell eine passwortlose
 Anmeldung, Profil-Onboarding, eine Angebotsübersicht und vollständige
 Angebotsdetails. Das FastAPI-Backend verwaltet Nutzer, Angebote,
-Login-Challenges sowie rotierende Access- und Refresh Tokens.
+Login-Challenges sowie rotierende Access- und Refresh Tokens mit absoluter
+Sessionlebensdauer.
 
 Reservierungen, Bestellungen, Zahlungen und persistente Favoriten sind noch
 nicht implementiert. Eine ausführliche Bestandsaufnahme mit Architektur,
@@ -16,6 +17,8 @@ Implementiert:
 
 - passwortlose Anmeldung mit Einmalcode oder Magic Link
 - JWT Access Tokens und rotierende Refresh Tokens
+- absolute maximale Lebensdauer pro Refresh-Sessionfamilie
+- Session-Cleanup mit Retention und Batch-Limit
 - automatische Session-Erneuerung im Mobile Client
 - Profilvervollständigung und geschützte Navigation
 - öffentliche Angebotsliste mit lokaler Kategoriefilterung
@@ -64,12 +67,18 @@ Alle leeren Werte müssen ausgefüllt werden. Besonders wichtig sind:
 | `DATABASE_URL` | SQLAlchemy-Verbindung; im Docker-Netz ist der Host `db` |
 | `REDIS_URL` | Redis-Verbindung; im Docker-Netz ist der Host `redis` |
 | `JWT_SECRET` | geheime Signatur des Access Tokens |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | gleitende Ablaufzeit einzelner Refresh Tokens |
+| `REFRESH_SESSION_ABSOLUTE_LIFETIME_DAYS` | harte maximale Lebensdauer einer Sessionfamilie |
+| `REFRESH_SESSION_CLEANUP_RETENTION_DAYS` | Aufbewahrungszeit alter terminaler Refresh Sessions vor Cleanup |
+| `REFRESH_SESSION_CLEANUP_BATCH_SIZE` | maximale Anzahl zu löschender Refresh Sessions pro Cleanup-Lauf |
 | `REFRESH_ROTATION_GRACE_SECONDS` | vorbereitetes Grace Window für rotierte Refresh Tokens |
 | `REFRESH_IDEMPOTENCY_KEY_MIN_LENGTH`, `REFRESH_IDEMPOTENCY_KEY_MAX_LENGTH` | Längengrenzen für Refresh-Idempotency-Keys |
 | `AUTH_CHALLENGE_SECRET` | geheimer HMAC-Schlüssel für Login-Challenges, mindestens 32 Zeichen |
 | `APP_ENVIRONMENT` | `development`, `test` oder `production` |
 
 Secrets gehören ausschließlich in `.env` und dürfen nicht committed werden.
+In `APP_ENVIRONMENT=production` lehnt das Backend schwache oder bekannte
+Platzhalterwerte für JWT- und Challenge-Secrets ab.
 
 ### 2. Backend und Infrastruktur starten
 
@@ -170,6 +179,11 @@ Aktueller Auth-Refresh-Vertrag:
   Refresh-Versuch vollständig verarbeitet wurde.
 - Das Backend speichert Refresh Tokens und Idempotency-Keys nur gehasht, nie
   im Klartext.
+- Jede Sessionfamilie besitzt ein festes `absolute_expires_at`; Rotation kann
+  dieses Datum nicht verlängern.
+- Alte expired/revoked/absolut abgelaufene Refresh Sessions können per
+  Service-Cleanup in Batches gelöscht werden. Ein Scheduler ist noch nicht
+  eingerichtet.
 
 ## Repository-Struktur
 
