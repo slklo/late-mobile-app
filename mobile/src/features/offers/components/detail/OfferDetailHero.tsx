@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -8,8 +7,11 @@ import type { OfferDetailViewModel } from "../../types/offerDetail.types";
 import { OfferImage } from "../OfferImage";
 
 type OfferDetailHeroProps = {
+    isFavorite?: boolean;
+    isFavoriteUpdating?: boolean;
     offer: OfferDetailViewModel;
     onBack: () => void;
+    onToggleFavorite?: () => void;
 };
 
 function FallbackIcon({ children }: { children: string }) {
@@ -37,10 +39,12 @@ function getStatusBadgeClass(statusLabel: string): string {
 }
 
 export function OfferDetailHero({
+    isFavorite = false,
+    isFavoriteUpdating = false,
     offer,
     onBack,
+    onToggleFavorite,
 }: OfferDetailHeroProps) {
-    const [isFavorite, setFavorite] = useState(false);
     const insets = useSafeAreaInsets();
 
     return (
@@ -83,10 +87,21 @@ export function OfferDetailHero({
                             : "Add offer to favorites"
                     }
                     accessibilityRole="button"
-                    accessibilityState={{ selected: isFavorite }}
+                    accessibilityState={{
+                        disabled: isFavoriteUpdating || !onToggleFavorite,
+                        selected: isFavorite,
+                    }}
                     activeOpacity={0.76}
-                    className="size-11 items-center justify-center rounded-pill border border-offer-hero-action-border bg-offer-hero-action"
-                    onPress={() => setFavorite((current) => !current)}
+                    className={
+                        "size-11 items-center justify-center rounded-pill border border-offer-hero-action-border bg-offer-hero-action"
+                        + (
+                            isFavoriteUpdating
+                                ? " opacity-60"
+                                : ""
+                        )
+                    }
+                    disabled={isFavoriteUpdating || !onToggleFavorite}
+                    onPress={onToggleFavorite}
                 >
                     <NativeWindSymbol
                         className={

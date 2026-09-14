@@ -1,9 +1,17 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useMemo, useState } from "react";
 
 import { OfferDetailView } from "@/features/offers/components/OfferDetailView";
 import { OfferDetailState } from "@/features/offers/components/detail/OfferDetailState";
 import { useOfferDetailQuery } from "@/features/offers/hooks/useOfferDetailQuery";
 import { mapOfferToDetailViewModel } from "@/features/offers/mappers/offerDetail.mapper";
+import {
+    getOfferDetailFallbackRoute,
+    getOfferDetailSourceTab,
+} from "@/features/offers/utils/offerDetailNavigation";
+import { useSavedOffersQuery } from "@/features/saved-offers/hooks/useSavedOffersQuery";
+import { useToggleSavedOffer } from "@/features/saved-offers/hooks/useToggleSavedOffer";
+import { getSavedOfferIds } from "@/features/saved-offers/utils/getSavedOfferIds";
 import {
     getApiErrorCode,
     getApiErrorMessage,
@@ -33,12 +41,30 @@ function parseOfferId(
 }
 
 export default function OfferDetailRoute() {
-    const { offerId: offerIdParam } = useLocalSearchParams<{
+    const {
+        offerId: offerIdParam,
+        from,
+    } = useLocalSearchParams<{
         offerId?: string | string[];
+        from?: string | string[];
     }>();
     const router = useRouter();
     const offerIdResult = parseOfferId(offerIdParam);
+    const sourceTab = getOfferDetailSourceTab(from);
+    const fallbackRoute = getOfferDetailFallbackRoute(sourceTab);
     const offerQuery = useOfferDetailQuery(offerIdResult.value);
+    const savedOffersQuery = useSavedOffersQuery();
+    const toggleSavedOffer = useToggleSavedOffer();
+    const [isFavoriteUpdating, setFavoriteUpdating] = useState(false);
+    const savedOfferIds = useMemo(
+        () => getSavedOfferIds(savedOffersQuery.data),
+        [savedOffersQuery.data],
+    );
+    const isFavorite = (
+        offerIdResult.value !== null
+        && savedOfferIds.has(offerIdResult.value)
+    );
+    const favoriteIsUnavailable = savedOffersQuery.isError;
 
     function handleBack() {
         if (router.canGoBack()) {
@@ -46,11 +72,40 @@ export default function OfferDetailRoute() {
             return;
         }
 
-        router.replace("/");
+        router.replace(fallbackRoute);
     }
 
     function handleExplore() {
-        router.replace("/");
+        router.replace(fallbackRoute);
+    }
+
+    async function handleToggleFavorite() {
+        if (
+            offerIdResult.value === null
+            || isFavoriteUpdating
+            || favoriteIsUnavailable
+        ) {
+            return;
+        }
+
+        setFavoriteUpdating(true);
+
+        try {
+            await toggleSavedOffer.mutateAsync({
+                offerId: offerIdResult.value,
+                isCurrentlySaved: isFavorite,
+            });
+        } catch {
+            // Keep the detail page usable and preserve the previous
+            // favorite state. A visible error surface can be added later.
+        } finally {
+            setFavoriteUpdating(false);
+        }
+    }
+
+    function handleRefresh() {
+        void offerQuery.refetch();
+        void savedOffersQuery.refetch();
     }
 
     if (offerIdResult.error !== null) {
@@ -111,10 +166,17 @@ export default function OfferDetailRoute() {
 
     return (
         <OfferDetailView
+            isFavorite={isFavorite}
+            isFavoriteUpdating={
+                isFavoriteUpdating
+                || savedOffersQuery.isPending
+                || favoriteIsUnavailable
+            }
             isRefetching={offerQuery.isRefetching}
             offer={mapOfferToDetailViewModel(offerQuery.data)}
             onBack={handleBack}
-            onRefresh={() => void offerQuery.refetch()}
+            onRefresh={handleRefresh}
+            onToggleFavorite={() => void handleToggleFavorite()}
         />
     );
 }
