@@ -20,6 +20,10 @@ class UserRepository:
         self.db.add(user)
         return user
 
+    def flush(self, user: User) -> User:
+        self.db.flush([user])
+        return user
+
     def save(self, user: User) -> User:
         self.add(user)
 

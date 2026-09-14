@@ -60,9 +60,11 @@ class StubUserService:
         self.users = users
         self.simulate_unique_conflict = simulate_unique_conflict
         self.create_calls = 0
+        self.create_commit_values: list[bool] = []
 
-    def create_user(self, data) -> StubUser:
+    def create_user(self, data, *, commit: bool = True) -> StubUser:
         self.create_calls += 1
+        self.create_commit_values.append(commit)
 
         user = StubUser(
             id=101,
@@ -211,6 +213,7 @@ def test_valid_code_creates_user_and_consumes_challenge() -> None:
     result = verify(service, challenge.challenge_id, VALID_CODE)
 
     assert user_service.create_calls == 1
+    assert user_service.create_commit_values == [False]
     assert challenges.challenge is None
     assert result.user.email == challenge.email
     assert result.next_step is AuthNextStep.COMPLETE_PROFILE

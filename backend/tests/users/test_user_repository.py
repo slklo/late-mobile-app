@@ -10,9 +10,13 @@ class FakeSession:
         self.commit_calls = 0
         self.rollback_calls = 0
         self.refreshed: object | None = None
+        self.flushed: list[object] | None = None
 
     def add(self, value: object) -> None:
         self.added = value
+
+    def flush(self, values: list[object]) -> None:
+        self.flushed = values
 
     def commit(self) -> None:
         self.commit_calls += 1
@@ -39,6 +43,19 @@ def test_save_commits_and_refreshes_user() -> None:
     assert session.commit_calls == 1
     assert session.rollback_calls == 0
     assert session.refreshed is user
+
+
+def test_flush_flushes_user_without_committing() -> None:
+    session = FakeSession()
+    repository = UserRepository(session)  # type: ignore[arg-type]
+    user = object()
+
+    result = repository.flush(user)  # type: ignore[arg-type]
+
+    assert result is user
+    assert session.flushed == [user]
+    assert session.commit_calls == 0
+    assert session.rollback_calls == 0
 
 
 def test_save_rolls_back_when_commit_fails() -> None:

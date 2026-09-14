@@ -21,6 +21,10 @@ class StubUserRepository:
         self.requested_email: str | None = None
         self.requested_user_id: int | None = None
         self.saved_user: User | None = None
+        self.added_user: User | None = None
+        self.flushed_user: User | None = None
+        self.rollback_calls = 0
+        self.db = self
 
     def get_by_email(self, email: str) -> User | None:
         self.requested_email = email
@@ -38,6 +42,22 @@ class StubUserRepository:
 
         self.user = user
         return user
+
+    def add(self, user: User) -> User:
+        self.added_user = user
+        self.user = user
+        return user
+
+    def flush(self, user: User) -> User:
+        self.flushed_user = user
+
+        if self.save_error is not None:
+            raise self.save_error
+
+        return user
+
+    def rollback(self) -> None:
+        self.rollback_calls += 1
 
 
 def create_service(repository: StubUserRepository) -> UserService:
@@ -67,6 +87,33 @@ def test_create_user_normalizes_email_and_saves_user() -> None:
     assert user.email == "user@example.com"
     assert user.email_verified_at is not None
     assert user.profile_completed_at is None
+
+
+def test_create_user_can_flush_without_committing() -> None:
+    repository = StubUserRepository()
+    service = create_service(repository)
+
+    user = service.create_user(
+        UserCreate(email="User@Example.com", full_name=None),
+        commit=False,
+    )
+
+    assert repository.requested_email == "user@example.com"
+    assert repository.saved_user is None
+    assert repository.added_user is user
+    assert repository.flushed_user is user
+    assert user.email == "user@example.com"
+
+
+def test_create_user_without_commit_rolls_back_unique_conflict() -> None:
+    error = IntegrityError("statement", {}, RuntimeError("duplicate"))
+    repository = StubUserRepository(save_error=error)
+    service = create_service(repository)
+
+    with pytest.raises(EmailAlreadyRegisteredError):
+        service.create_user(UserCreate(email="user@example.com"), commit=False)
+
+    assert repository.rollback_calls == 1
 
 
 def test_create_user_rejects_existing_email() -> None:

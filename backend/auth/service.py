@@ -280,6 +280,7 @@ class AuthService:
         try:
             return self.user_service.create_user(
                 UserCreate(email=email),
+                commit=False,
             )
         except EmailAlreadyRegisteredError:
             user = self.users.get_by_email(email)

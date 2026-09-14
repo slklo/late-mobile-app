@@ -12,7 +12,7 @@ class UserService:
     def __init__(self, repository: UserRepository):
         self.repository = repository
 
-    def create_user(self, data: UserCreate) -> User:
+    def create_user(self, data: UserCreate, *, commit: bool = True) -> User:
         email = data.email.lower().strip()
         now = datetime.now(timezone.utc)
 
@@ -34,8 +34,15 @@ class UserService:
         )
 
         try:
-            return self.repository.save(user)
+            if commit:
+                return self.repository.save(user)
+
+            self.repository.add(user)
+            return self.repository.flush(user)
         except IntegrityError as exc:
+            if not commit:
+                self.repository.db.rollback()
+
             raise EmailAlreadyRegisteredError() from exc
 
     def get_user_by_id(self, user_id: int) -> User:
