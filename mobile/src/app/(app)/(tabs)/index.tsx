@@ -27,6 +27,9 @@ import {
     getExploreCategories,
     splitOffersForExplore,
 } from "@/features/offers/utils/exploreOffers";
+import { useSavedOffersQuery } from "@/features/saved-offers/hooks/useSavedOffersQuery";
+import { useToggleSavedOffer } from "@/features/saved-offers/hooks/useToggleSavedOffer";
+import { getSavedOfferIds } from "@/features/saved-offers/utils/getSavedOfferIds";
 import { NativeWindRefreshControl } from "@/shared/ui/nativewindInterop";
 
 function getGreeting(hour: number): string {
@@ -47,6 +50,12 @@ export default function ExploreScreen() {
     const { data, isLoading, isError, refetch, isRefetching } = (
         useOffersQuery()
     );
+    const {
+        data: savedOffers,
+        isLoading: savedOffersAreLoading,
+        refetch: refetchSavedOffers,
+    } = useSavedOffersQuery();
+    const toggleSavedOffer = useToggleSavedOffer();
     const user = useAuthStore((state) => state.user);
     const logout = useLogout();
     const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES);
@@ -69,6 +78,10 @@ export default function ExploreScreen() {
         () => splitOffersForExplore(filteredOffers),
         [filteredOffers],
     );
+    const savedOfferIds = useMemo(
+        () => getSavedOfferIds(savedOffers),
+        [savedOffers],
+    );
     const firstName = user?.full_name?.trim().split(/\s+/)[0] || "there";
     const greeting = getGreeting(new Date().getHours());
 
@@ -87,6 +100,24 @@ export default function ExploreScreen() {
             params: { offerId: String(offer.id) },
         });
     }, [router]);
+    const handleFavoritePress = useCallback((offer: OfferCardViewModel) => {
+        if (savedOffersAreLoading || toggleSavedOffer.isPending) {
+            return;
+        }
+
+        toggleSavedOffer.mutate({
+            offerId: offer.id,
+            isCurrentlySaved: savedOfferIds.has(offer.id),
+        });
+    }, [
+        savedOfferIds,
+        savedOffersAreLoading,
+        toggleSavedOffer,
+    ]);
+    const handleRefresh = useCallback(() => {
+        void refetch();
+        void refetchSavedOffers();
+    }, [refetch, refetchSavedOffers]);
 
     if (isLoading) {
         return (
@@ -144,7 +175,7 @@ export default function ExploreScreen() {
                 refreshControl={(
                     <NativeWindRefreshControl
                         className="text-offer-primary"
-                        onRefresh={refetch}
+                        onRefresh={handleRefresh}
                         refreshing={isRefetching}
                     />
                 )}
@@ -184,14 +215,26 @@ export default function ExploreScreen() {
                     <View className="mt-7 gap-7">
                         <OfferSection
                             emptyLabel="No recommended offers in this category."
+                            favoriteDisabled={
+                                savedOffersAreLoading
+                                || toggleSavedOffer.isPending
+                            }
+                            onFavoritePress={handleFavoritePress}
                             onOfferPress={handleOfferPress}
                             offers={sections.recommended}
+                            savedOfferIds={savedOfferIds}
                             title="Recommended offers"
                         />
                         <OfferSection
                             emptyLabel="No other offers in this category."
+                            favoriteDisabled={
+                                savedOffersAreLoading
+                                || toggleSavedOffer.isPending
+                            }
+                            onFavoritePress={handleFavoritePress}
                             onOfferPress={handleOfferPress}
                             offers={sections.inArea}
+                            savedOfferIds={savedOfferIds}
                             title="In your area"
                         />
                     </View>

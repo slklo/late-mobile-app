@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
     Pressable,
     Text,
@@ -15,7 +14,10 @@ import type {
 import { OfferImage } from "./OfferImage";
 
 type OfferCardProps = {
+    favoriteDisabled?: boolean;
+    isFavorite?: boolean;
     offer: OfferCardViewModel;
+    onFavoritePress?: () => void;
     onPress?: () => void;
 };
 
@@ -36,11 +38,12 @@ function FallbackIcon({ children }: { children: string }) {
 }
 
 export function OfferCard({
+    favoriteDisabled = false,
+    isFavorite = false,
     offer,
+    onFavoritePress,
     onPress,
 }: OfferCardProps) {
-    const [isFavorite, setFavorite] = useState(false);
-
     return (
         <View className="w-[calc(100vw-72px)] min-w-[248px] max-w-[276px] rounded-card bg-offer-card shadow-offer-tile elevation-offer-tile">
             <Pressable
@@ -78,12 +81,16 @@ export function OfferCard({
                                 : `Add ${offer.offerTitle} to favorites`
                         }
                         accessibilityRole="button"
-                        accessibilityState={{ selected: isFavorite }}
+                        accessibilityState={{
+                            disabled: favoriteDisabled,
+                            selected: isFavorite,
+                        }}
                         activeOpacity={0.78}
                         className="absolute right-3 top-3 size-8 items-center justify-center rounded-pill bg-offer-favorite-overlay"
+                        disabled={favoriteDisabled || !onFavoritePress}
                         onPress={(event) => {
                             event.stopPropagation();
-                            setFavorite((current) => !current);
+                            onFavoritePress?.();
                         }}
                     >
                         <NativeWindSymbol
