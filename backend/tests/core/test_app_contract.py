@@ -6,6 +6,8 @@ from main import app
 EXPECTED_OPENAPI_PATHS = {
     "/api/offers/",
     "/api/offers/{offer_id}",
+    "/api/saved-offers/",
+    "/api/saved-offers/{offer_id}/",
     "/api/auth/email/request",
     "/api/auth/email/verify-code",
     "/api/auth/email/consume-link",

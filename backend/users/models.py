@@ -1,13 +1,11 @@
 from datetime import datetime
-from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from auth.models import RefreshSession  # noqa: F401
 from core.database import Base
-
-if TYPE_CHECKING:
-    from auth.models import RefreshSession
+from saved_offers.models import SavedOffer  # noqa: F401
 
 
 class User(Base):
@@ -59,6 +57,13 @@ class User(Base):
 
     refresh_sessions: Mapped[list["RefreshSession"]] = relationship(
         "RefreshSession",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    saved_offers: Mapped[list["SavedOffer"]] = relationship(
+        "SavedOffer",
         back_populates="user",
         cascade="all, delete-orphan",
         passive_deletes=True,

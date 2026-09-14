@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from core.database import Base
 
@@ -20,6 +21,13 @@ from sqlalchemy.orm import (
     mapped_column,
     relationship,
 )
+
+from categories.models import Category  # noqa: F401
+from restaurants.models import Restaurant  # noqa: F401
+
+if TYPE_CHECKING:
+    from saved_offers.models import SavedOffer
+
 
 class Offer(Base):
     __tablename__ = "offers"
@@ -68,4 +76,11 @@ class Offer(Base):
     category = relationship(
         "Category",
         back_populates="offers",
+    )
+
+    saved_offers: Mapped[list["SavedOffer"]] = relationship(
+        "SavedOffer",
+        back_populates="offer",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
