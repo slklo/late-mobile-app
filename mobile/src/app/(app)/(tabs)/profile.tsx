@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuthStore } from "@/features/auth/store/authStore";
 import type { CurrentUser } from "@/features/auth/types/auth.types";
+import { ProfileImpactCard } from "@/features/profile/components/ProfileImpactCard";
 import { ProfileMenuButton } from "@/features/profile/components/ProfileMenuButton";
 import { ProfileSection } from "@/features/profile/components/ProfileSection";
 
@@ -124,6 +125,29 @@ export default function ProfileTabScreen() {
                             </Text>
                         </View>
                     ) : null}
+                </View>
+
+                <View className="mt-6">
+                    <Text className="px-1 text-[11px] font-extrabold uppercase tracking-[1px] text-offer-muted-text">
+                        YOUR IMPACT
+                    </Text>
+                    <View className="mt-2.5 flex-row gap-2.5">
+                        <ProfileImpactCard
+                            accent
+                            label="Meals rescued"
+                            value="0"
+                        />
+                        <ProfileImpactCard label="Saved" value="€0" />
+                        <ProfileImpactCard label="Pickups" value="0" />
+                    </View>
+                    <Text className="mt-3 px-1 text-[12px] font-semibold leading-5 text-offer-muted-text">
+                        Your impact will appear here after your first pickup.
+                    </Text>
+                    <View className="mt-3 rounded-card border border-offer-metadata-border bg-offer-secondary px-4 py-3">
+                        <Text className="text-[13px] font-bold leading-5 text-offer-deep-green">
+                            Every rescued meal helps reduce food waste.
+                        </Text>
+                    </View>
                 </View>
 
                 <View className="mt-6">
