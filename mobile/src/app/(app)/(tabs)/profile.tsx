@@ -176,6 +176,86 @@ export default function ProfileTabScreen() {
                         />
                     </ProfileSection>
                 </View>
+
+                <View className="mt-6">
+                    <ProfileSection title="ACCOUNT">
+                        <ProfileMenuButton
+                            iconFallback="P"
+                            iconName="person"
+                            label="Account details"
+                            onPress={() => {
+                                Alert.alert(
+                                    "Coming soon",
+                                    "Account details will be available later.",
+                                );
+                            }}
+                        />
+                        <ProfileMenuButton
+                            iconFallback="€"
+                            iconName="creditcard"
+                            label="Payment methods"
+                            onPress={() => {
+                                Alert.alert(
+                                    "Coming soon",
+                                    "Payment methods will be available later.",
+                                );
+                            }}
+                        />
+                        <ProfileMenuButton
+                            iconFallback="✓"
+                            iconName="shield"
+                            isLast
+                            label="Security"
+                            onPress={() => {
+                                Alert.alert(
+                                    "Coming soon",
+                                    "Security settings will be available later.",
+                                );
+                            }}
+                        />
+                    </ProfileSection>
+                </View>
+
+                <View className="mt-6">
+                    <ProfileSection title="APP">
+                        <ProfileMenuButton
+                            hint="English"
+                            iconFallback="🌐"
+                            iconName="globe"
+                            label="Language"
+                            onPress={() => {
+                                Alert.alert(
+                                    "Coming soon",
+                                    "Language settings will be available later.",
+                                );
+                            }}
+                        />
+                        <ProfileMenuButton
+                            iconFallback="§"
+                            iconName="doc.text"
+                            label="Privacy & Terms"
+                            onPress={() => {
+                                Alert.alert(
+                                    "Coming soon",
+                                    "Privacy and terms will be available later.",
+                                );
+                            }}
+                        />
+                        <ProfileMenuButton
+                            hint="v1.0"
+                            iconFallback="i"
+                            iconName="info.circle"
+                            isLast
+                            label="About LatePlate"
+                            onPress={() => {
+                                Alert.alert(
+                                    "Coming soon",
+                                    "About LatePlate will be available later.",
+                                );
+                            }}
+                        />
+                    </ProfileSection>
+                </View>
             </ScrollView>
         </SafeAreaView>
     );
