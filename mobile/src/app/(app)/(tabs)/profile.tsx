@@ -4,6 +4,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuthStore } from "@/features/auth/store/authStore";
 import type { CurrentUser } from "@/features/auth/types/auth.types";
+import { ProfileActionRow } from "@/features/profile/components/ProfileActionRow";
+import { ProfileSection } from "@/features/profile/components/ProfileSection";
 
 
 function getEmailPrefix(email: string | undefined): string | null {
@@ -122,6 +124,41 @@ export default function ProfileTabScreen() {
                             </Text>
                         </View>
                     ) : null}
+                </View>
+
+                <View className="mt-6">
+                    <ProfileSection title="ACTIVITY">
+                        <ProfileActionRow
+                            badge={0}
+                            disabled
+                            hint="Soon"
+                            iconFallback="☰"
+                            iconName="list.bullet.rectangle"
+                            label="My Orders"
+                        />
+                        <ProfileActionRow
+                            disabled
+                            hint="Soon"
+                            iconFallback="♡"
+                            iconName="heart"
+                            label="Saved Offers"
+                        />
+                        <ProfileActionRow
+                            disabled
+                            hint="Soon"
+                            iconFallback="!"
+                            iconName="bell"
+                            label="Notifications"
+                        />
+                        <ProfileActionRow
+                            disabled
+                            hint="Soon"
+                            iconFallback="?"
+                            iconName="questionmark.circle"
+                            isLast
+                            label="Help & Support"
+                        />
+                    </ProfileSection>
                 </View>
             </ScrollView>
         </SafeAreaView>
