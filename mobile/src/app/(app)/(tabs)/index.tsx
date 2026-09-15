@@ -30,18 +30,16 @@ import {
 import { useSavedOffersQuery } from "@/features/saved-offers/hooks/useSavedOffersQuery";
 import { useToggleSavedOffer } from "@/features/saved-offers/hooks/useToggleSavedOffer";
 import { getSavedOfferIds } from "@/features/saved-offers/utils/getSavedOfferIds";
-import { NativeWindRefreshControl } from "@/shared/ui/nativewindInterop";
 
 export default function ExploreScreen() {
     const router = useRouter();
     const isOfferNavigationLocked = useRef(false);
-    const { data, isLoading, isError, refetch, isRefetching } = (
+    const { data, isLoading, isError, refetch } = (
         useOffersQuery()
     );
     const {
         data: savedOffers,
         isLoading: savedOffersAreLoading,
-        refetch: refetchSavedOffers,
     } = useSavedOffersQuery();
     const toggleSavedOffer = useToggleSavedOffer();
     const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES);
@@ -99,10 +97,6 @@ export default function ExploreScreen() {
         savedOffersAreLoading,
         toggleSavedOffer,
     ]);
-    const handleRefresh = useCallback(() => {
-        void refetch();
-        void refetchSavedOffers();
-    }, [refetch, refetchSavedOffers]);
     const handleLocationPress = useCallback(() => {
         Alert.alert(
             "Standort ändern",
@@ -165,15 +159,11 @@ export default function ExploreScreen() {
                 onPress={handleLocationPress}
             />
             <ScrollView
+                alwaysBounceVertical={false}
+                bounces={false}
                 className="flex-1 bg-offer-background"
                 contentContainerClassName="pb-10"
-                refreshControl={(
-                    <NativeWindRefreshControl
-                        className="text-offer-primary"
-                        onRefresh={handleRefresh}
-                        refreshing={isRefetching}
-                    />
-                )}
+                overScrollMode="never"
                 showsVerticalScrollIndicator={false}
             >
                 <View className="mt-4">
