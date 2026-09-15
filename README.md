@@ -2,14 +2,14 @@
 
 LatePlate ist ein Full-Stack-Prototyp für zeitlich begrenzte, vergünstigte
 Restaurantangebote. Die Expo-App unterstützt aktuell eine passwortlose
-Anmeldung, Profil-Onboarding, eine Angebotsübersicht und vollständige
-Angebotsdetails. Das FastAPI-Backend verwaltet Nutzer, Angebote,
-Login-Challenges sowie rotierende Access- und Refresh Tokens mit absoluter
-Sessionlebensdauer.
+Anmeldung, Profil-Onboarding, eine Angebotsübersicht, gespeicherte Favoriten
+und vollständige Angebotsdetails. Das FastAPI-Backend verwaltet Nutzer,
+Angebote, gespeicherte Angebote, Login-Challenges sowie rotierende Access-
+und Refresh Tokens mit absoluter Sessionlebensdauer.
 
-Reservierungen, Bestellungen, Zahlungen und persistente Favoriten sind noch
-nicht implementiert. Eine ausführliche Bestandsaufnahme mit Architektur,
-Risiken, Testabdeckung und Roadmap steht in [PROJECT_STATUS.md](PROJECT_STATUS.md).
+Reservierungen, Bestellungen und Zahlungen sind noch nicht implementiert.
+Eine ausführliche Bestandsaufnahme mit Architektur, Risiken, Testabdeckung
+und Roadmap steht in [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
 ## Aktueller Funktionsumfang
 
@@ -22,7 +22,11 @@ Implementiert:
 - automatische Session-Erneuerung im Mobile Client
 - Profilvervollständigung und geschützte Navigation
 - öffentliche Angebotsliste mit lokaler Kategoriefilterung
+- Explore-Header mit vorbereitetem Standort-Selector
+- Bottom-Tab-Navigation für Explore, Suche, Favoriten und Profil
 - eigenständige, scrollbare Angebotsdetailseite
+- persistente gespeicherte Angebote über `/api/saved-offers`
+- Favoriten-Tab mit eigener gespeicherter Angebotskarte
 - PostgreSQL-Migrationen mit Alembic
 - Redis-basierte, atomare Login-Challenges
 
@@ -30,15 +34,16 @@ Teilweise oder nur für Entwicklung verfügbar:
 
 - Codes und Magic Links werden erzeugt, aber noch nicht über einen produktiven
   E-Mail-Provider versendet
-- Favoriten existieren nur als lokaler UI-State
-- Bezeichnungen wie „Recommended“, „In your area“ und „Nearby“ basieren noch
-  nicht auf Ranking- oder Standortdaten
+- Suche, Profil-Tab-Inhalte und Standortauswahl sind UI-Einstiegspunkte, aber
+  fachlich noch nicht vollständig umgesetzt
+- Bezeichnungen wie „Recommended“ und „In your area“ basieren noch nicht auf
+  Ranking- oder Standortdaten
 
 ## Technologie
 
 | Bereich | Technologien |
 | --- | --- |
-| Mobile | Expo 54, React Native, Expo Router, TypeScript, Axios, TanStack Query, Zustand, NativeWind, Vitest |
+| Mobile | Expo 57, React Native, Expo Router, TypeScript, Axios, TanStack Query, Zustand, NativeWind, Vitest |
 | Backend | FastAPI, Pydantic, SQLAlchemy 2.x, Alembic, pytest |
 | Infrastruktur | PostgreSQL 17, Redis 7.4, Docker Compose |
 
@@ -126,6 +131,32 @@ npm run ios
 npm run web
 ```
 
+Wenn LAN-Verbindung vom echten Gerät nicht möglich ist, kann der experimentelle
+Expo-WS-Tunnel verwendet werden:
+
+```powershell
+npm run start:tunnel:clear
+```
+
+Dieses Script setzt `EXPO_UNSTABLE_TUNNEL_V2=1` und umgeht damit den alten
+ngrok-v2-Pfad von Expo. Es kann einen Expo-Login benötigen:
+
+```powershell
+npx expo login
+```
+
+Für Backend/API-Tunnel steht zusätzlich ein modernes ngrok-v3-Binary im
+Mobile-Projekt bereit:
+
+```powershell
+npm run ngrok:version
+npm run ngrok:auth -- <NGROK_AUTH_TOKEN>
+npm run tunnel:api
+```
+
+`EXPO_PUBLIC_API_BASE_URL` muss dabei auf die Backend-URL zeigen, nicht auf
+eine `exp://`-Metro-URL.
+
 ## Tests und Qualitätsprüfungen
 
 Backend-Testlauf im gestarteten Docker-Container:
@@ -153,10 +184,8 @@ Ein Lint-Skript ist vorhanden:
 npm run lint
 ```
 
-Im aktuellen Repository fehlt jedoch noch eine eingecheckte ESLint-Konfiguration.
-Expo versucht sie beim ersten Aufruf interaktiv beziehungsweise mit Zugriff auf
-die Paket-Registry einzurichten. Der Lint-Lauf ist daher noch nicht vollständig
-reproduzierbar vorbereitet.
+Der aktuelle Lint-Lauf ist ausführbar und meldet derzeit nur bestehende
+Warnungen, keine Fehler.
 
 ## OpenAPI-Typen aktualisieren
 
@@ -193,10 +222,11 @@ backend/                 FastAPI-Anwendung, Domainmodule und Tests
   core/                  Konfiguration, Datenbank und Fehlerbehandlung
   migrations/            Alembic-Konfiguration und Migrationen
   offers/                Angebots-API und Geschäftslogik
+  saved_offers/          persistente gespeicherte Angebote pro Benutzer
   users/                 Nutzerverwaltung
 mobile/                  Expo-/React-Native-App
   src/app/               Expo-Router-Seiten und Layouts
-  src/features/          Auth- und Offer-Funktionalität
+  src/features/          Auth-, Offer-, Saved-Offer- und Location-UI
   src/shared/            API Client, Storage und gemeinsame Hilfen
 docker-compose.yml       Backend, PostgreSQL und Redis
 PROJECT_STATUS.md        Architektur-, Risiko- und Roadmap-Bericht
