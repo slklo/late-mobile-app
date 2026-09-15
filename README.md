@@ -27,6 +27,7 @@ Implementiert:
 - eigenständige, scrollbare Angebotsdetailseite
 - persistente gespeicherte Angebote über `/api/saved-offers`
 - Favoriten-Tab mit eigener gespeicherter Angebotskarte
+- Profil-Tab als MVP-Shell mit Identity Card, Impact-Zero-State und Mock-Menüs
 - PostgreSQL-Migrationen mit Alembic
 - Redis-basierte, atomare Login-Challenges
 
@@ -34,7 +35,7 @@ Teilweise oder nur für Entwicklung verfügbar:
 
 - Codes und Magic Links werden erzeugt, aber noch nicht über einen produktiven
   E-Mail-Provider versendet
-- Suche, Profil-Tab-Inhalte und Standortauswahl sind UI-Einstiegspunkte, aber
+- Suche, Profil-Menüaktionen und Standortauswahl sind UI-Einstiegspunkte, aber
   fachlich noch nicht vollständig umgesetzt
 - Bezeichnungen wie „Recommended“ und „In your area“ basieren noch nicht auf
   Ranking- oder Standortdaten
@@ -226,7 +227,7 @@ backend/                 FastAPI-Anwendung, Domainmodule und Tests
   users/                 Nutzerverwaltung
 mobile/                  Expo-/React-Native-App
   src/app/               Expo-Router-Seiten und Layouts
-  src/features/          Auth-, Offer-, Saved-Offer- und Location-UI
+  src/features/          Auth-, Offer-, Saved-Offer-, Profile- und Location-UI
   src/shared/            API Client, Storage und gemeinsame Hilfen
 docker-compose.yml       Backend, PostgreSQL und Redis
 PROJECT_STATUS.md        Architektur-, Risiko- und Roadmap-Bericht
