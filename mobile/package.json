@@ -46,6 +46,8 @@
   "scripts": {
     "generate:api": "npx --yes --package=openapi-typescript@7.13.0 --package=typescript@5.9.3 openapi-typescript http://localhost:8000/openapi.json -o src/shared/api/generated/schema.d.ts",
     "start": "expo start",
+    "start:tunnel": "set EXPO_UNSTABLE_TUNNEL_V2=1&& expo start --tunnel",
+    "start:tunnel:clear": "set EXPO_UNSTABLE_TUNNEL_V2=1&& expo start --tunnel -c",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",

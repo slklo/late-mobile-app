@@ -7,12 +7,13 @@ type OfferImageProps = {
     imageUrl?: string | null;
     offerTitle: string;
     placeholderLabel?: string;
-    variant?: "card" | "hero";
+    variant?: "card" | "hero" | "saved";
 };
 
 const heightClasses = {
     card: "h-offer-card-image",
     hero: "h-offer-hero",
+    saved: "h-[190px]",
 } as const;
 
 export function OfferImage({
