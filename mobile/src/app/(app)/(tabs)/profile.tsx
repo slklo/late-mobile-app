@@ -1,10 +1,10 @@
 import { StatusBar } from "expo-status-bar";
-import { ScrollView, Text, View } from "react-native";
+import { Alert, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuthStore } from "@/features/auth/store/authStore";
 import type { CurrentUser } from "@/features/auth/types/auth.types";
-import { ProfileActionRow } from "@/features/profile/components/ProfileActionRow";
+import { ProfileMenuButton } from "@/features/profile/components/ProfileMenuButton";
 import { ProfileSection } from "@/features/profile/components/ProfileSection";
 
 
@@ -128,35 +128,51 @@ export default function ProfileTabScreen() {
 
                 <View className="mt-6">
                     <ProfileSection title="ACTIVITY">
-                        <ProfileActionRow
+                        <ProfileMenuButton
                             badge={0}
-                            disabled
-                            hint="Soon"
                             iconFallback="☰"
                             iconName="list.bullet.rectangle"
                             label="My Orders"
+                            onPress={() => {
+                                Alert.alert(
+                                    "Coming soon",
+                                    "Orders will be available later.",
+                                );
+                            }}
                         />
-                        <ProfileActionRow
-                            disabled
-                            hint="Soon"
+                        <ProfileMenuButton
                             iconFallback="♡"
                             iconName="heart"
                             label="Saved Offers"
+                            onPress={() => {
+                                Alert.alert(
+                                    "Coming soon",
+                                    "Saved offers shortcuts will be available later.",
+                                );
+                            }}
                         />
-                        <ProfileActionRow
-                            disabled
-                            hint="Soon"
+                        <ProfileMenuButton
                             iconFallback="!"
                             iconName="bell"
                             label="Notifications"
+                            onPress={() => {
+                                Alert.alert(
+                                    "Coming soon",
+                                    "Notifications will be available later.",
+                                );
+                            }}
                         />
-                        <ProfileActionRow
-                            disabled
-                            hint="Soon"
+                        <ProfileMenuButton
                             iconFallback="?"
                             iconName="questionmark.circle"
                             isLast
                             label="Help & Support"
+                            onPress={() => {
+                                Alert.alert(
+                                    "Coming soon",
+                                    "Support will be available later.",
+                                );
+                            }}
                         />
                     </ProfileSection>
                 </View>
