@@ -7,6 +7,7 @@ import {
     useState,
 } from "react";
 import {
+    Alert,
     ScrollView,
     Text,
     TouchableOpacity,
@@ -14,8 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { useLogout } from "@/features/auth/hooks/useLogout";
-import { useAuthStore } from "@/features/auth/store/authStore";
+import { LocationHeader } from "@/features/location/components/LocationHeader";
 import { ExploreCategoryChips } from "@/features/offers/components/ExploreCategoryChips";
 import { OfferSection } from "@/features/offers/components/OfferSection";
 import { useOffersQuery } from "@/features/offers/hooks/useOffersQuery";
@@ -32,18 +32,6 @@ import { useToggleSavedOffer } from "@/features/saved-offers/hooks/useToggleSave
 import { getSavedOfferIds } from "@/features/saved-offers/utils/getSavedOfferIds";
 import { NativeWindRefreshControl } from "@/shared/ui/nativewindInterop";
 
-function getGreeting(hour: number): string {
-    if (hour < 12) {
-        return "Good morning";
-    }
-
-    if (hour < 18) {
-        return "Good afternoon";
-    }
-
-    return "Good evening";
-}
-
 export default function ExploreScreen() {
     const router = useRouter();
     const isOfferNavigationLocked = useRef(false);
@@ -56,9 +44,8 @@ export default function ExploreScreen() {
         refetch: refetchSavedOffers,
     } = useSavedOffersQuery();
     const toggleSavedOffer = useToggleSavedOffer();
-    const user = useAuthStore((state) => state.user);
-    const logout = useLogout();
     const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES);
+    const selectedLocation = "Golm, Potsdam";
     const offers = useMemo(
         () => mapOffersToCardViewModels(data ?? []),
         [data],
@@ -82,8 +69,6 @@ export default function ExploreScreen() {
         () => getSavedOfferIds(savedOffers),
         [savedOffers],
     );
-    const firstName = user?.full_name?.trim().split(/\s+/)[0] || "there";
-    const greeting = getGreeting(new Date().getHours());
 
     useFocusEffect(useCallback(() => {
         isOfferNavigationLocked.current = false;
@@ -118,6 +103,12 @@ export default function ExploreScreen() {
         void refetch();
         void refetchSavedOffers();
     }, [refetch, refetchSavedOffers]);
+    const handleLocationPress = useCallback(() => {
+        Alert.alert(
+            "Standort ändern",
+            "Die Standortauswahl wird später hier geöffnet.",
+        );
+    }, []);
 
     if (isLoading) {
         return (
@@ -165,10 +156,14 @@ export default function ExploreScreen() {
 
     return (
         <SafeAreaView
-            className="flex-1 bg-offer-deep-green"
+            className="flex-1 bg-offer-background"
             edges={["top"]}
         >
-            <StatusBar style="light" />
+            <StatusBar style="dark" />
+            <LocationHeader
+                location={selectedLocation}
+                onPress={handleLocationPress}
+            />
             <ScrollView
                 className="flex-1 bg-offer-background"
                 contentContainerClassName="pb-10"
@@ -181,29 +176,7 @@ export default function ExploreScreen() {
                 )}
                 showsVerticalScrollIndicator={false}
             >
-                <View className="flex-row items-center justify-between gap-3.5 rounded-b-detail-shell bg-offer-deep-green px-5 pb-6 pt-[18px]">
-                    <View className="flex-1">
-                        <Text className="text-2xl font-extrabold tracking-[-0.4px] text-offer-card">
-                            {greeting}, {firstName} 👋
-                        </Text>
-                        <Text className="mt-[5px] text-label text-offer-card/[.72]">
-                            Discover today&apos;s rescue offers.
-                        </Text>
-                    </View>
-                    <TouchableOpacity
-                        accessibilityLabel="Log out"
-                        accessibilityRole="button"
-                        activeOpacity={0.78}
-                        className="rounded-pill border border-offer-card/[.32] px-[13px] py-2"
-                        onPress={logout}
-                    >
-                        <Text className="text-xs font-bold text-offer-card">
-                            Log out
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-
-                <View className="mt-5">
+                <View className="mt-4">
                     <ExploreCategoryChips
                         categories={categories}
                         onSelect={setSelectedCategory}
