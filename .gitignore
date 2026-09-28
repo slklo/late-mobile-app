@@ -13,6 +13,9 @@ node_modules/
 
 .env
 
+.agents/
+PROJECT_STATUS.md
+
 # Expo
 .expo/
 dist/
