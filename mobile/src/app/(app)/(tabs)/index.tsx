@@ -43,7 +43,14 @@ export default function ExploreScreen() {
     } = useSavedOffersQuery();
     const toggleSavedOffer = useToggleSavedOffer();
     const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES);
+    const [pendingFavoriteOfferIds, setPendingFavoriteOfferIds] = (
+        useState<ReadonlySet<number>>(() => new Set())
+    );
     const selectedLocation = "Golm, Potsdam";
+    const offersById = useMemo(
+        () => new Map((data ?? []).map((offer) => [offer.id, offer])),
+        [data],
+    );
     const offers = useMemo(
         () => mapOffersToCardViewModels(data ?? []),
         [data],
@@ -83,16 +90,38 @@ export default function ExploreScreen() {
             params: { offerId: String(offer.id) },
         });
     }, [router]);
-    const handleFavoritePress = useCallback((offer: OfferCardViewModel) => {
-        if (savedOffersAreLoading || toggleSavedOffer.isPending) {
+    const handleFavoritePress = useCallback(async (
+        offer: OfferCardViewModel,
+    ) => {
+        if (
+            savedOffersAreLoading
+            || pendingFavoriteOfferIds.has(offer.id)
+        ) {
             return;
         }
 
-        toggleSavedOffer.mutate({
-            offerId: offer.id,
-            isCurrentlySaved: savedOfferIds.has(offer.id),
-        });
+        setPendingFavoriteOfferIds((currentIds) => (
+            new Set(currentIds).add(offer.id)
+        ));
+
+        try {
+            await toggleSavedOffer.mutateAsync({
+                offer: offersById.get(offer.id),
+                offerId: offer.id,
+                isCurrentlySaved: savedOfferIds.has(offer.id),
+            });
+        } catch {
+            // Optimistic cache rollback is handled in useToggleSavedOffer.
+        } finally {
+            setPendingFavoriteOfferIds((currentIds) => {
+                const nextIds = new Set(currentIds);
+                nextIds.delete(offer.id);
+                return nextIds;
+            });
+        }
     }, [
+        offersById,
+        pendingFavoriteOfferIds,
         savedOfferIds,
         savedOffersAreLoading,
         toggleSavedOffer,
@@ -151,7 +180,7 @@ export default function ExploreScreen() {
     return (
         <SafeAreaView
             className="flex-1 bg-offer-background"
-            edges={["top"]}
+            edges={[]}
         >
             <StatusBar style="dark" />
             <LocationHeader
@@ -180,8 +209,8 @@ export default function ExploreScreen() {
                             emptyLabel="No recommended offers in this category."
                             favoriteDisabled={
                                 savedOffersAreLoading
-                                || toggleSavedOffer.isPending
                             }
+                            favoriteDisabledOfferIds={pendingFavoriteOfferIds}
                             onFavoritePress={handleFavoritePress}
                             onOfferPress={handleOfferPress}
                             offers={sections.recommended}
@@ -192,8 +221,8 @@ export default function ExploreScreen() {
                             emptyLabel="No other offers in this category."
                             favoriteDisabled={
                                 savedOffersAreLoading
-                                || toggleSavedOffer.isPending
                             }
+                            favoriteDisabledOfferIds={pendingFavoriteOfferIds}
                             onFavoritePress={handleFavoritePress}
                             onOfferPress={handleOfferPress}
                             offers={sections.inArea}

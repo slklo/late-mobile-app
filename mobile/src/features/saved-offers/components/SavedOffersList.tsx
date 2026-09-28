@@ -12,6 +12,7 @@ import { SavedOfferCard } from "./SavedOfferCard";
 
 type SavedOffersListProps = {
     disabled?: boolean;
+    disabledOfferIds?: ReadonlySet<number>;
     offers: OfferCardViewModel[];
     onOfferPress: (offer: OfferCardViewModel) => void;
     onRemove: (offer: OfferCardViewModel) => void;
@@ -26,6 +27,7 @@ function Separator() {
 
 export function SavedOffersList({
     disabled = false,
+    disabledOfferIds,
     offers,
     onOfferPress,
     onRemove,
@@ -39,7 +41,7 @@ export function SavedOffersList({
             keyExtractor={(offer) => String(offer.id)}
             renderItem={({ item }) => (
                 <SavedOfferCard
-                    disabled={disabled}
+                    disabled={disabled || disabledOfferIds?.has(item.id)}
                     offer={item}
                     onPress={() => onOfferPress(item)}
                     onRemove={() => onRemove(item)}

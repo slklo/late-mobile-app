@@ -1,6 +1,11 @@
 import { StatusBar } from "expo-status-bar";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useMemo, useRef } from "react";
+import {
+    useCallback,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -18,15 +23,17 @@ export default function FavoriteTabScreen() {
         data: savedOffers,
         isError,
         isLoading,
-        isRefetching,
         refetch,
     } = useSavedOffersQuery();
     const toggleSavedOffer = useToggleSavedOffer();
+    const [isManualRefreshing, setManualRefreshing] = useState(false);
+    const [pendingRemoveOfferIds, setPendingRemoveOfferIds] = (
+        useState<ReadonlySet<number>>(() => new Set())
+    );
     const offers = useMemo(
         () => mapSavedOffersToCardViewModels(savedOffers ?? []),
         [savedOffers],
     );
-    const removeIsPending = toggleSavedOffer.isPending;
 
     useFocusEffect(useCallback(() => {
         navigationLocked.current = false;
@@ -47,26 +54,50 @@ export default function FavoriteTabScreen() {
         });
     }, [router]);
 
-    const handleRemove = useCallback((offer: OfferCardViewModel) => {
-        if (removeIsPending) {
+    const handleRemove = useCallback(async (offer: OfferCardViewModel) => {
+        if (pendingRemoveOfferIds.has(offer.id)) {
             return;
         }
 
-        toggleSavedOffer.mutate({
-            offerId: offer.id,
-            isCurrentlySaved: true,
-        });
-    }, [removeIsPending, toggleSavedOffer]);
+        setPendingRemoveOfferIds((currentIds) => (
+            new Set(currentIds).add(offer.id)
+        ));
+
+        try {
+            await toggleSavedOffer.mutateAsync({
+                offerId: offer.id,
+                isCurrentlySaved: true,
+            });
+        } catch {
+            // Optimistic cache rollback is handled in useToggleSavedOffer.
+        } finally {
+            setPendingRemoveOfferIds((currentIds) => {
+                const nextIds = new Set(currentIds);
+                nextIds.delete(offer.id);
+                return nextIds;
+            });
+        }
+    }, [pendingRemoveOfferIds, toggleSavedOffer]);
 
     const handleBrowseOffers = useCallback(() => {
         router.replace("/");
     }, [router]);
 
+    const handleManualRefresh = useCallback(async () => {
+        setManualRefreshing(true);
+
+        try {
+            await refetch();
+        } finally {
+            setManualRefreshing(false);
+        }
+    }, [refetch]);
+
     const refreshControl = (
         <NativeWindRefreshControl
             className="text-offer-primary"
-            onRefresh={refetch}
-            refreshing={isRefetching}
+            onRefresh={() => void handleManualRefresh()}
+            refreshing={isManualRefreshing}
         />
     );
 
@@ -154,7 +185,7 @@ export default function FavoriteTabScreen() {
                 </Text>
             </View>
             <SavedOffersList
-                disabled={removeIsPending}
+                disabledOfferIds={pendingRemoveOfferIds}
                 offers={offers}
                 onOfferPress={handleOfferPress}
                 onRemove={handleRemove}

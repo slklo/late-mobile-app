@@ -1,10 +1,10 @@
 import {
     Pressable,
     Text,
-    TouchableOpacity,
     View,
 } from "react-native";
 
+import { FavoriteHeartButton } from "@/features/saved-offers/components/FavoriteHeartButton";
 import { NativeWindSymbol } from "@/shared/ui/nativewindInterop";
 
 import type {
@@ -74,41 +74,19 @@ export function OfferCard({
                         </View>
                     ) : null}
 
-                    <TouchableOpacity
-                        accessibilityLabel={
-                            isFavorite
-                                ? `Remove ${offer.offerTitle} from favorites`
-                                : `Add ${offer.offerTitle} to favorites`
-                        }
-                        accessibilityRole="button"
-                        accessibilityState={{
-                            disabled: favoriteDisabled,
-                            selected: isFavorite,
-                        }}
-                        activeOpacity={0.78}
-                        className="absolute right-3 top-3 size-8 items-center justify-center rounded-pill bg-offer-favorite-overlay"
-                        disabled={favoriteDisabled || !onFavoritePress}
-                        onPress={(event) => {
-                            event.stopPropagation();
-                            onFavoritePress?.();
-                        }}
-                    >
-                        <NativeWindSymbol
-                            className={
+                    <View className="absolute right-3 top-3">
+                        <FavoriteHeartButton
+                            accessibilityLabel={
                                 isFavorite
-                                    ? "text-offer-urgent"
-                                    : "text-white"
+                                    ? `Remove ${offer.offerTitle} from favorites`
+                                    : `Add ${offer.offerTitle} to favorites`
                             }
-                            fallback={(
-                                <FallbackIcon>
-                                    {isFavorite ? "♥" : "♡"}
-                                </FallbackIcon>
-                            )}
-                            name={isFavorite ? "heart.fill" : "heart"}
-                            size={17}
-                            weight="semibold"
+                            disabled={favoriteDisabled}
+                            isFavorite={isFavorite}
+                            onPress={onFavoritePress}
+                            size="card"
                         />
-                    </TouchableOpacity>
+                    </View>
                 </View>
 
                 <View className="gap-1 px-3.5 py-[13px]">

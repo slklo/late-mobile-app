@@ -15,6 +15,7 @@ node_modules/
 
 .agents/
 PROJECT_STATUS.md
+PROJECT_EVAL.md
 
 # Expo
 .expo/

@@ -1,7 +1,6 @@
 import {
     Pressable,
     Text,
-    TouchableOpacity,
     View,
 } from "react-native";
 
@@ -11,6 +10,8 @@ import type {
     OfferCardViewModel,
 } from "@/features/offers/types/offerCard.types";
 import { NativeWindSymbol } from "@/shared/ui/nativewindInterop";
+
+import { FavoriteHeartButton } from "./FavoriteHeartButton";
 
 
 type SavedOfferCardProps = {
@@ -79,29 +80,17 @@ export function SavedOfferCard({
                         </View>
                     ) : null}
 
-                    <TouchableOpacity
-                        accessibilityLabel={`Remove ${offer.offerTitle} from favorites`}
-                        accessibilityRole="button"
-                        accessibilityState={{
-                            disabled,
-                            selected: true,
-                        }}
-                        activeOpacity={0.78}
-                        className="absolute right-3 top-2.5 size-[34px] items-center justify-center rounded-pill bg-offer-card/90"
-                        disabled={disabled}
-                        onPress={(event) => {
-                            event.stopPropagation();
-                            onRemove();
-                        }}
-                    >
-                        <NativeWindSymbol
-                            className="text-offer-urgent"
-                            fallback={<FallbackIcon>♥</FallbackIcon>}
-                            name="heart.fill"
-                            size={16}
-                            weight="semibold"
+                    <View className="absolute right-3 top-2.5">
+                        <FavoriteHeartButton
+                            accessibilityLabel={
+                                `Remove ${offer.offerTitle} from favorites`
+                            }
+                            disabled={disabled}
+                            isFavorite
+                            onPress={onRemove}
+                            size="card"
                         />
-                    </TouchableOpacity>
+                    </View>
                 </View>
 
                 <View className="px-4 pb-4 pt-3.5">

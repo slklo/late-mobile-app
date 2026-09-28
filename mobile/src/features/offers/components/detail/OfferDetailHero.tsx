@@ -1,6 +1,7 @@
 import { Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { FavoriteHeartButton } from "@/features/saved-offers/components/FavoriteHeartButton";
 import { NativeWindSymbol } from "@/shared/ui/nativewindInterop";
 
 import type { OfferDetailViewModel } from "../../types/offerDetail.types";
@@ -80,43 +81,17 @@ export function OfferDetailHero({
                     />
                 </TouchableOpacity>
 
-                <TouchableOpacity
+                <FavoriteHeartButton
                     accessibilityLabel={
                         isFavorite
                             ? "Remove offer from favorites"
                             : "Add offer to favorites"
                     }
-                    accessibilityRole="button"
-                    accessibilityState={{
-                        disabled: isFavoriteUpdating || !onToggleFavorite,
-                        selected: isFavorite,
-                    }}
-                    activeOpacity={0.76}
-                    className={
-                        "size-11 items-center justify-center rounded-pill border border-offer-hero-action-border bg-offer-hero-action"
-                        + (
-                            isFavoriteUpdating
-                                ? " opacity-60"
-                                : ""
-                        )
-                    }
                     disabled={isFavoriteUpdating || !onToggleFavorite}
+                    isFavorite={isFavorite}
                     onPress={onToggleFavorite}
-                >
-                    <NativeWindSymbol
-                        className={
-                            isFavorite ? "text-offer-urgent" : "text-white"
-                        }
-                        fallback={(
-                            <FallbackIcon>
-                                {isFavorite ? "Liked" : "Like"}
-                            </FallbackIcon>
-                        )}
-                        name={isFavorite ? "heart.fill" : "heart"}
-                        size={20}
-                        weight="semibold"
-                    />
-                </TouchableOpacity>
+                    size="hero"
+                />
             </View>
 
             <View

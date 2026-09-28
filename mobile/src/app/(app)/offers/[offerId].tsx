@@ -92,6 +92,7 @@ export default function OfferDetailRoute() {
 
         try {
             await toggleSavedOffer.mutateAsync({
+                offer: offerQuery.data,
                 offerId: offerIdResult.value,
                 isCurrentlySaved: isFavorite,
             });

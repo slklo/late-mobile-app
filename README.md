@@ -22,11 +22,11 @@ Implementiert:
 - automatische Session-Erneuerung im Mobile Client
 - Profilvervollständigung und geschützte Navigation
 - öffentliche Angebotsliste mit lokaler Kategoriefilterung
-- Explore-Header mit vorbereitetem Standort-Selector
+- safe-area-fähiger Explore-Header mit vorbereitetem Standort-Selector
 - Bottom-Tab-Navigation für Explore, Suche, Favoriten und Profil
 - eigenständige, scrollbare Angebotsdetailseite
 - persistente gespeicherte Angebote über `/api/saved-offers`
-- Favoriten-Tab mit eigener gespeicherter Angebotskarte
+- Favoriten-Tab mit eigener gespeicherter Angebotskarte und animiertem Herz-Button
 - Profil-Tab als MVP-Shell mit Identity Card, Impact-Zero-State und Mock-Menüs
 - PostgreSQL-Migrationen mit Alembic
 - Redis-basierte, atomare Login-Challenges
@@ -39,6 +39,8 @@ Teilweise oder nur für Entwicklung verfügbar:
   fachlich noch nicht vollständig umgesetzt
 - Bezeichnungen wie „Recommended“ und „In your area“ basieren noch nicht auf
   Ranking- oder Standortdaten
+- Pull-to-refresh und Top-Overscroll sind im Explore-Feed bewusst deaktiviert;
+  normale Scroll- und Query-Refetch-Mechanismen bleiben erhalten
 
 ## Technologie
 

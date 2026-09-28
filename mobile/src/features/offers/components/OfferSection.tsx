@@ -6,6 +6,7 @@ import { OfferCard } from "./OfferCard";
 type OfferSectionProps = {
     emptyLabel: string;
     favoriteDisabled?: boolean;
+    favoriteDisabledOfferIds?: ReadonlySet<number>;
     onFavoritePress?: (offer: OfferCardViewModel) => void;
     onOfferPress?: (offer: OfferCardViewModel) => void;
     offers: OfferCardViewModel[];
@@ -20,6 +21,7 @@ function CardSeparator() {
 export function OfferSection({
     emptyLabel,
     favoriteDisabled,
+    favoriteDisabledOfferIds,
     onFavoritePress,
     onOfferPress,
     offers,
@@ -42,7 +44,10 @@ export function OfferSection({
                     removeClippedSubviews={false}
                     renderItem={({ item }) => (
                         <OfferCard
-                            favoriteDisabled={favoriteDisabled}
+                            favoriteDisabled={
+                                favoriteDisabled
+                                || favoriteDisabledOfferIds?.has(item.id)
+                            }
                             isFavorite={savedOfferIds?.has(item.id) ?? false}
                             offer={item}
                             onFavoritePress={
